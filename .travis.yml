@@ -1,26 +1,15 @@
-# Source: https://github.com/boostorg/hana/blob/master/.travis.yml
-
 # Use C++ build environment.
 language: cpp
 
-# Protobuf requires g++ (see https://github.com/google/protobuf/blob/master/src/README.md)
-compiler:
-    - gcc
+sudo: required
 
-dist: xenial
+# We use docker-based builds to enable current Ubuntu LTS BuildEnv
+services:
+    - docker
 
-addons:
-    apt:
-        packages:
-            - cmake
-            - libprotobuf-dev
-            - protobuf-compiler
-            - qtbase5-dev
-            - libzmq3-dev
+before_install:
+    - docker build -t osi-standard/osi-visualizer .
 
 # Run the build script.
 script:
-    - mkdir -p build
-    - cd build
-    - cmake ..
-    - cmake --build .
+        - docker run -it -v $(pwd):/project osi-standard/osi-visualizer /bin/sh -c "mkdir -p build && cd build && cmake .. && cmake --build ."

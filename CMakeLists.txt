@@ -8,7 +8,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 
-find_package(Qt5 COMPONENTS Core Gui OpenGL Widgets Xml REQUIRED)
+find_package(Qt5 COMPONENTS Core Gui OpenGL Widgets Xml Network REQUIRED)
 
 set(SOURCES
     src/main.cpp
@@ -70,6 +70,7 @@ target_link_libraries(${PROJECT_NAME}
     Qt5::Xml
     Qt5::Gui
     Qt5::OpenGL
+    Qt5::Network
 
     open_simulation_interface_pic
     protobuf

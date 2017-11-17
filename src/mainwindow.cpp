@@ -19,6 +19,7 @@
 #include <QRadioButton>
 #include <QFileDialog>
 #include <QLineEdit>
+#include <QHostAddress>
 
 #include <sstream>
 #include <iomanip>
@@ -28,7 +29,6 @@
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , config_("appconfig.xml")
-    , isChannelCombined_(false)
 
     , isSrcConnection_(true)
     , isSrcConnection2_(true)
@@ -47,12 +47,12 @@ MainWindow::MainWindow(QWidget *parent)
 
     , glWidget_(nullptr)
     , receiver_(new TCPReceiver())
-    , reader_(new OsiReader())
+    , reader_(new OsiReader(&config_.ch1DeltaDelay_))
     , osiparser_(new OsiParser(config_.osiMsgSaveThreshold_))
 
     , glWidget2_(nullptr)
     , receiver2_(new TCPReceiver())
-    , reader2_(new OsiReader())
+    , reader2_(new OsiReader(&config_.ch2DeltaDelay_))
     , osiparser2_(new OsiParser(config_.osiMsgSaveThreshold_))
 
     , colorWidgets_()
@@ -210,7 +210,7 @@ void
 MainWindow::PlayPauseButtonClicked()
 {
     LocalPlayPause();
-    if(isChannelCombined_)
+    if(config_.combineChannel_)
         LocalPlayPause2();
 
     UpdateCombineChannelMenu();
@@ -219,6 +219,9 @@ MainWindow::PlayPauseButtonClicked()
 void
 MainWindow::LocalPlayPause()
 {
+    if(CheckFieldsValidity() == false)
+        return;
+
     bool configUpdated = UpdateConfigure();
 
     if(isConnected_ == true && isSrcConnection_ == false)
@@ -264,7 +267,7 @@ void
 MainWindow::PlayPauseButtonClicked2()
 {
     LocalPlayPause2();
-    if(isChannelCombined_)
+    if(config_.combineChannel_)
         LocalPlayPause();
 
     UpdateCombineChannelMenu();
@@ -273,6 +276,9 @@ MainWindow::PlayPauseButtonClicked2()
 void
 MainWindow::LocalPlayPause2()
 {
+    if(CheckFieldsValidity2() == false)
+        return;
+
     bool configUpdated = UpdateConfigure2();
 
     if(isConnected2_ == true && isSrcConnection2_ == false)
@@ -312,6 +318,93 @@ MainWindow::LocalPlayPause2()
     }
 
     UpdateFields2();
+}
+
+bool
+MainWindow::CheckFieldsValidity()
+{
+    bool success (true);
+    QString errMsg;
+
+    // IP address
+    QHostAddress ipAddress;
+    if(ipAddress.setAddress(ui_->ipAddress->text()) == false)
+    {
+        errMsg += "  Invalid IP address!\n";
+    }
+
+    // Port number
+    ui_->portNumber->text().toUInt(&success);
+    if(success == false)
+        errMsg += "  Port number should be valid integer!\n";
+
+    // Load file
+    if(QFileInfo::exists(ui_->loadFile->text()) == false)
+    {
+        success = false;
+        errMsg += "  Load file doesn't exist!\n";
+    }
+
+    // Delta delay
+    ui_->deltaDelay->text().toUInt(&success);
+    if(success == false)
+        errMsg += "  Port number should be valid positive integer!\n";
+
+    if(errMsg.isEmpty() == false)
+    {
+        success = false;
+        ShowErrorMessage("Channel 1: \n" + errMsg);
+    }
+
+    return success;
+}
+
+bool
+MainWindow::CheckFieldsValidity2()
+{
+    bool success (true);
+    QString errMsg;
+
+    // IP address
+    QHostAddress ipAddress;
+    if(ipAddress.setAddress(ui_->ipAddress_2->text()) == false)
+    {
+        errMsg += "  Invalid IP address!\n";
+    }
+
+    // Port number
+    ui_->portNumber_2->text().toUInt(&success);
+    if(success == false)
+        errMsg += "  Port number should be valid integer!\n";
+
+    // Load file
+    if(QFileInfo::exists(ui_->loadFile_2->text()) == false)
+    {
+        success = false;
+        errMsg += "  Load file doesn't exist!\n";
+    }
+
+    // Delta delay
+    ui_->deltaDelay_2->text().toUInt(&success);
+    if(success == false)
+        errMsg += "  Port number should be valid positive integer!\n";
+
+    if(errMsg.isEmpty() == false)
+    {
+        success = false;
+        ShowErrorMessage("Channel 2: \n" + errMsg);
+    }
+
+    return success;
+}
+
+void
+MainWindow::ShowErrorMessage(const QString& errMsg)
+{
+    QMessageBox messageBox;
+    messageBox.critical(this, "Error", errMsg);
+    messageBox.setFixedSize(200, 100);
+    qDebug() << errMsg;
 }
 
 void
@@ -507,6 +600,7 @@ MainWindow::EnablePlaybackGroup1(bool enable)
 {
     ui_->loadFile->setEnabled(enable);
     ui_->loadFileBrowse->setEnabled(enable);
+    ui_->deltaDelay->setEnabled(enable);
 }
 
 void
@@ -514,6 +608,7 @@ MainWindow::EnablePlaybackGroup2(bool enable)
 {
     ui_->loadFile_2->setEnabled(enable);
     ui_->loadFileBrowse_2->setEnabled(enable);
+    ui_->deltaDelay_2->setEnabled(enable);
 }
 
 void
@@ -672,6 +767,11 @@ MainWindow::UpdateConfigure()
     if(hasChange)
         config_.Save();
 
+    if(config_.ch1DeltaDelay_ != ui_->deltaDelay->text().toInt())
+    {
+        config_.ch1DeltaDelay_ = ui_->deltaDelay->text().toInt();
+    }
+
     return hasChange;
 }
 
@@ -707,6 +807,11 @@ MainWindow::UpdateConfigure2()
     if(hasChange)
         config_.Save();
 
+    if(config_.ch2DeltaDelay_ != ui_->deltaDelay_2->text().toInt())
+    {
+        config_.ch2DeltaDelay_ = ui_->deltaDelay_2->text().toInt();
+    }
+
     return hasChange;
 }
 
@@ -719,11 +824,13 @@ MainWindow::InitLoadConfigure()
         ui_->portNumber->setText(config_.ch1PortNum_);
         ui_->dataType->setCurrentIndex( static_cast<int>(config_.ch1DataType_) );
         ui_->loadFile->setText(config_.ch1LoadFile_);
+        ui_->deltaDelay->setText(QString::number(config_.ch1DeltaDelay_));
 
         ui_->ipAddress_2->setText(config_.ch2IPAddress_);
         ui_->portNumber_2->setText(config_.ch2PortNum_);
         ui_->dataType_2->setCurrentIndex( static_cast<int>(config_.ch2DataType_) );
         ui_->loadFile_2->setText(config_.ch2LoadFile_);
+        ui_->deltaDelay_2->setText(QString::number(config_.ch2DeltaDelay_));
 
         ui_->actionShowGrid->setChecked(config_.showGrid_);
         ui_->actionShowObject->setChecked(config_.showObjectDetails_);
@@ -843,7 +950,7 @@ MainWindow::PythonCompare()
 void
 MainWindow::CombineChannels()
 {
-    isChannelCombined_ = !isChannelCombined_;
+    config_.combineChannel_ = !config_.combineChannel_;
 }
 
 void
@@ -1069,7 +1176,7 @@ MainWindow::Connected2(DataType dataType)
 }
 
 void
-MainWindow::Disconnected(QString message)
+MainWindow::Disconnected(const QString& message)
 {
     isConnected_ = false;
     isPlayed_ = false;
@@ -1079,17 +1186,20 @@ MainWindow::Disconnected(QString message)
 
     if (!message.isEmpty())
     {
-        QMessageBox messageBox;
-        messageBox.critical(this, "Error", message);
-        messageBox.setFixedSize(200, 100);
-        qDebug() << message;
+        if(config_.combineChannel_)
+        {
+            ui_->actionCombiCh->setChecked(false);
+            config_.combineChannel_ = false;
+        }
+
+        ShowErrorMessage(message);
     }
 
     UpdateCombineChannelMenu();
 }
 
 void
-MainWindow::Disconnected2(QString message)
+MainWindow::Disconnected2(const QString& message)
 {
     isConnected2_ = false;
     isPlayed2_ = false;
@@ -1099,10 +1209,13 @@ MainWindow::Disconnected2(QString message)
 
     if (!message.isEmpty())
     {
-        QMessageBox messageBox;
-        messageBox.critical(this, "Error", message);
-        messageBox.setFixedSize(200, 100);
-        qDebug() << message;
+        if(config_.combineChannel_)
+        {
+            ui_->actionCombiCh->setChecked(false);
+            config_.combineChannel_ = false;
+        }
+
+        ShowErrorMessage(message);
     }
 
     UpdateCombineChannelMenu();

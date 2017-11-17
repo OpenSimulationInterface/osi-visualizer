@@ -27,7 +27,7 @@ class OsiReader: public QObject, public IMessageSource
     Q_OBJECT
 
     public:
-        OsiReader();
+        OsiReader(int* deltaDelay);
 
         signals:
             void Connected(DataType dataType);
@@ -66,6 +66,8 @@ class OsiReader: public QObject, public IMessageSource
         QMutex iterMutex_;
         bool iterChanged_;
         std::vector<std::pair<uint64_t, std::streamoff> >::iterator newIterStamp_;
+
+        const int* const deltaDelay_;
 
         // read from input file: data type is always SensorData
         const DataType defaultDatatype_ = DataType::Groundtruth;

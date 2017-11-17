@@ -1,0 +1,15 @@
+# Use C++ build environment.
+language: cpp
+
+sudo: required
+
+# We use docker-based builds to enable current Ubuntu LTS BuildEnv
+services:
+    - docker
+
+before_install:
+    - docker build -t osi-standard/osi-visualizer .
+
+# Run the build script.
+script:
+        - docker run -it -v $(pwd):/project osi-standard/osi-visualizer /bin/sh -c "mkdir -p build && cd build && cmake .. && cmake --build ."

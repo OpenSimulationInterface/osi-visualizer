@@ -30,3 +30,12 @@
 *.exe
 *.out
 *.app
+
+# generated Protofiles
+proto/generated/
+
+# build folder
+build
+
+# Qtcreator project file
+CMakeLists.txt.user

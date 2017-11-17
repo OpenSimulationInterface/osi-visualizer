@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.1)
+add_subdirectory(open-simulation-interface)
 project(osi-visualizer)
 
 set(CMAKE_CXX_STANDARD 11)
@@ -56,18 +57,7 @@ set(HEADERS
     include/osiparser.h
 )
 
-
-include_directories(
-    /usr/include/osi
-    ${CMAKE_CURRENT_LIST_DIR}/include
-#    /usr/include/x86_64-linux-gnu/qt5
-)
-
-link_directories(
-    /usr/lib/osi
-#    /usr/lib/x86_64-linux-gnu/qt5
-)
-
+include_directories(include)
 
 add_executable(${PROJECT_NAME}
     ${HEADERS}
@@ -85,4 +75,3 @@ target_link_libraries(${PROJECT_NAME}
     protobuf
     zmq
 )
-

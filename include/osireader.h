@@ -8,8 +8,8 @@
 
 #pragma once
 
-#include <osi/osi_version.pb.h>
-#include <osi/osi_sensordata.pb.h>
+#include <osi_version.pb.h>
+#include <osi_sensordata.pb.h>
 
 #include <fstream>
 #include <iostream>

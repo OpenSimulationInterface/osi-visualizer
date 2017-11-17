@@ -29,13 +29,15 @@ Log or cut out part of the osi message stream. Current the threshold is 100 osi 
 
 ### View Menu:
 "Combine Channels" -> Config two channels' "Play/Pause' button act simultaneously, or not. It can only be checked when the channels are at the same status: both "Play" or "Pause". By default, it is unchecked.
+
 "Show Grid" -> Show up the grid in the canvas. By default, it is checked.
+
 "Show Object details" -> Select object from the Objects Overview tree. Show up the selected object's position, velocity and acceleration in another independent dialog. By default, it is checked.
 
 The others are self-explaining.
 
 ## Notice
-When playing large osi files, try to adapt the Delta Delay and it renders smoothly.
+When playing large osi files, try to adapt the Delta Delay. Then the tool renders smoothly.
 
 
 

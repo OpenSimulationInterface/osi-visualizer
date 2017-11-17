@@ -33,7 +33,7 @@ install:
         export PATH=${DEPS_DIR}/protobuf/install/bin:${PATH}
 
     # Install QT5
-    - sudo apt-get install qtbase5-dev 
+    - sudo apt-get install qtbase5-dev libzmq3-dev
 
 # Change directory back to default build directory.
 before_script:

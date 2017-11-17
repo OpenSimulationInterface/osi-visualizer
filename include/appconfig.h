@@ -22,12 +22,15 @@ class AppConfig
         QString  ch1PortNum_;
         DataType ch1DataType_;
         QString  ch1LoadFile_;
+        int      ch1DeltaDelay_;
 
         QString  ch2IPAddress_;
         QString  ch2PortNum_;
         DataType ch2DataType_;
         QString  ch2LoadFile_;
+        int      ch2DeltaDelay_;
 
+        bool combineChannel_;
         bool showGrid_;
         bool showObjectDetails_;
         bool lockCamera_;

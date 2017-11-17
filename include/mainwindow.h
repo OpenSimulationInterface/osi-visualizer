@@ -59,8 +59,8 @@ class MainWindow : public QMainWindow
         void ToggleSaveOSIMessage2();
         void Connected(DataType dataType);
         void Connected2(DataType dataType);
-        void Disconnected(QString message);
-        void Disconnected2(QString message);
+        void Disconnected(const QString& message);
+        void Disconnected2(const QString& message);
 
         void UpdateSliderRange(int sliderRange);
         void UpdateSliderRange2(int sliderRange);
@@ -170,11 +170,14 @@ class MainWindow : public QMainWindow
 
         void UpdateCombineChannelMenu();
 
+        bool CheckFieldsValidity();
+        bool CheckFieldsValidity2();
+
+        void ShowErrorMessage(const QString& errMsg);
+
 
         // Configurations
         AppConfig config_;
-
-        bool isChannelCombined_;
 
         // Source come from ethernet or input file
         bool isSrcConnection_;

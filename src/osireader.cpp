@@ -7,7 +7,7 @@
 
 #include "osireader.h"
 
-OsiReader::OsiReader()
+OsiReader::OsiReader(int *deltaDelay)
     : IMessageSource()
     , isRunning_(false)
     , isReadTerminated_(false)
@@ -18,6 +18,8 @@ OsiReader::OsiReader()
     , iterMutex_()
     , iterChanged_(false)
     , newIterStamp_()
+
+    , deltaDelay_(deltaDelay)
 {
 
 }
@@ -331,7 +333,10 @@ OsiReader::SendMessageLoop()
                     if(sleep < 0)
                         sleep = 0;
 
-                    usleep(sleep/1000);
+                    sleep /= 1000;
+                    sleep += *deltaDelay_ * 1000;
+
+                    usleep(sleep);
                     preTimeStamp = curStamp;
 
                     MessageSendout(osiSD, defaultDatatype_);

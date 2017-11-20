@@ -8,12 +8,27 @@ This software serves as visualization tool for the current implementation of the
 
 It supports two independent visual channels with two different input types (file and network stream). 
 
+## Build
+### From Terminal:
+- cd ${SRC_DIRECTORY}
+- mkdir build
+- cd build
+- cmake ..
+- make
+- cp osi-visualizer ..
+- cd ..
+- ./osi-visualizer
+
+### From QtCreator:
+Open New Project -> CMakeLists.txt 
+
+
 ## Usage 
 ### Connection:
 The channel receives osi message from the network with specific IP address, Port number and data type.
 
 ### Playback:
-The channel receives osi message from the loaded file. 
+The channel receives osi message from the loaded file. The tool will check a header file of same name with a extension: .txth. If it doesn't exist, the tool will create one automatically for the first time.
 A "Delta-Delay" variable can be set to slow down the playback speed in case of very large message files. By default this value is "0" ms. 
 Example: set it to 10 ms, each message will have 10 ms more delay for playing.
 
@@ -29,13 +44,15 @@ Log or cut out part of the osi message stream. Current the threshold is 100 osi 
 
 ### View Menu:
 "Combine Channels" -> Config two channels' "Play/Pause' button act simultaneously, or not. It can only be checked when the channels are at the same status: both "Play" or "Pause". By default, it is unchecked.
+
 "Show Grid" -> Show up the grid in the canvas. By default, it is checked.
+
 "Show Object details" -> Select object from the Objects Overview tree. Show up the selected object's position, velocity and acceleration in another independent dialog. By default, it is checked.
 
 The others are self-explaining.
 
 ## Notice
-When playing large osi files, try to adapt the Delta Delay and it renders smoothly.
+When playing large osi files, try to adapt the Delta Delay. Then the tool renders smoothly.
 
 
 

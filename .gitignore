@@ -36,6 +36,10 @@ proto/generated/
 
 # build folder
 build
+osi-visualizer
 
 # Qtcreator project file
 CMakeLists.txt.user
+
+# Config file
+appconfig.xml

@@ -8,6 +8,21 @@ This software serves as visualization tool for the current implementation of the
 
 It supports two independent visual channels with two different input types (file and network stream). 
 
+## Build
+### From Terminal:
+cd ${SRC_DIRECTORY}
+mkdir build
+cd build
+cmake ..
+make
+cp osi-visualizer ..
+cd ..
+./osi-visualizer
+
+### From QtCreator:
+Open New Project -> CMakeLists.txt 
+
+
 ## Usage 
 ### Connection:
 The channel receives osi message from the network with specific IP address, Port number and data type.

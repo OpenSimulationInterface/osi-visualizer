@@ -10,14 +10,14 @@ It supports two independent visual channels with two different input types (file
 
 ## Build
 ### From Terminal:
-cd ${SRC_DIRECTORY}
-mkdir build
-cd build
-cmake ..
-make
-cp osi-visualizer ..
-cd ..
-./osi-visualizer
+-cd ${SRC_DIRECTORY}
+-mkdir build
+-cd build
+-cmake ..
+-make
+-cp osi-visualizer ..
+-cd ..
+-./osi-visualizer
 
 ### From QtCreator:
 Open New Project -> CMakeLists.txt 

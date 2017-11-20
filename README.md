@@ -28,7 +28,7 @@ Open New Project -> CMakeLists.txt
 The channel receives osi message from the network with specific IP address, Port number and data type.
 
 ### Playback:
-The channel receives osi message from the loaded file. 
+The channel receives osi message from the loaded file. The tool will check a header file of same name with a extension: .txth. If it doesn't exist, the tool will create one automatically for the first time.
 A "Delta-Delay" variable can be set to slow down the playback speed in case of very large message files. By default this value is "0" ms. 
 Example: set it to 10 ms, each message will have 10 ms more delay for playing.
 

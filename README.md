@@ -6,15 +6,17 @@ Visualization tool for OSI messages. This software serves as visualization tool 
 
 Some software library dependencies are needed to run the osi-visualizer:
 
-cmake (version >= 3.7): https://cmake.org/
-Qt (> 5.5.0): http://download.qt.io/official_releases/qt/
-ZeroMQ (>4.2.1): http://zeromq.org/intro:get-the-software (The osi-visualizer needs to use ZeroMQ libraries to complete the socket communication between different sensor / traffic / scenario simulators.)
-protobuf 2.6.1: https://github.com/google/protobuf
-Open Simulation Interface 2.2.0: https://github.com/OpenSimulationInterface/open-simulation-interface.git
+* cmake (version >= 3.5): https://cmake.org/
+* Qt (> 5.5.0): http://download.qt.io/official_releases/qt/
+* ZeroMQ (>4.2.1): http://zeromq.org/intro:get-the-software
+  The osi-visualizer needs to use ZeroMQ libraries to complete the socket communication between different sensor / traffic / scenario simulators. Note that the C++ Bindings are required as well.
+* protobuf 2.6.1: https://github.com/google/protobuf
 
-Please modify the original paths information to the user dependent local libraries setup in the CMakeLists.txt file.
+The required version of Open Simulation Interface (https://github.com/OpenSimulationInterface/open-simulation-interface.git) is referenced as a git submodule, so be sure to run git submodule init && git submodule update after cloning the osi-visualizer repository.
 
-We strongly recommend users to use the osi-visualizer under Ubuntu 16.04 Linux. 
+If the CMake build process does not automatically locate the required libraries, please use the usual CMake options to set the relevant CMake variables to the proper paths.
+
+Currently we strongly recommend users to use the osi-visualizer under Ubuntu Linux 16.04 LTS. You can see a working development environment based on Ubuntu 16.04 LTS in the Dockerfile in the repository.
 
 ## Build
 ### From Terminal:
@@ -61,6 +63,3 @@ The others are self-explaining.
 
 ## Notice
 When playing large osi files, try to adapt the Delta Delay. Then the tool renders smoothly.
-
-
-

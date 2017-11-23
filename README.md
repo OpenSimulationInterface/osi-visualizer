@@ -1,12 +1,20 @@
 # osi-visualizer
 
-Visualization tool for OSI messages.
+Visualization tool for OSI messages. This software serves as visualization tool for the current implementation of the [OSI (Open Simulation Interface)](https://github.com/OpenSimulationInterface/open-simulation-interface) mesages.The osi-visualizer supports to visualize the OSI GroundTruth and SensorData messages. It supports two independent visual channels with two different input types (file and network stream). 
 
 ## General Information
 
-This software serves as visualization tool for the current implementation of the [OSI (Open Simulation Interface)](https://github.com/OpenSimulationInterface/open-simulation-interface) mesages.
+Some software library dependencies are needed to run the osi-visualizer:
 
-It supports two independent visual channels with two different input types (file and network stream). 
+cmake (version >= 3.7): https://cmake.org/
+Qt (> 5.5.0): http://download.qt.io/official_releases/qt/
+ZeroMQ (>4.2.1): http://zeromq.org/intro:get-the-software (The osi-visualizer needs to use ZeroMQ libraries to complete the socket communication between different sensor / traffic / scenario simulators.)
+protobuf 2.6.1: https://github.com/google/protobuf
+Open Simulation Interface 2.2.0: https://github.com/OpenSimulationInterface/open-simulation-interface.git
+
+Please modify the original paths information to the user dependent local libraries setup in the CMakeLists.txt file.
+
+We strongly recommend users to use the osi-visualizer under Ubuntu 16.04 Linux. 
 
 ## Build
 ### From Terminal:

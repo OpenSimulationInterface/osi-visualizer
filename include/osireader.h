@@ -38,7 +38,7 @@ class OsiReader: public QObject, public IMessageSource
                                 const DataType datatype);
 
     public slots:
-            void StartReadFile(const QString& osiFileName);
+            void StartReadFile(const QString& osiFileName, const DataType dataType);
             void StopReadFile();
             void SliderValueChanged(int newValue);
 
@@ -70,7 +70,7 @@ class OsiReader: public QObject, public IMessageSource
         const int* const deltaDelay_;
 
         // read from input file: data type is always SensorData
-        const DataType defaultDatatype_ = DataType::Groundtruth;
+        DataType defaultDatatype_ = DataType::Groundtruth;
         const QString defaultHeaderPrifix_ = "Header_";
 };
 

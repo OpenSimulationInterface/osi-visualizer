@@ -11,12 +11,14 @@ AppConfig::AppConfig(QString fileName)
     , ch1PortNum_("")
     , ch1DataType_(DataType::Groundtruth)
     , ch1LoadFile_("")
+    , ch1PlaybackDataType_(DataType::Groundtruth)
     , ch1DeltaDelay_(0)
 
     , ch2IPAddress_("")
     , ch2PortNum_("")
     , ch2DataType_(DataType::Groundtruth)
     , ch2LoadFile_("")
+    , ch2PlaybackDataType_(DataType::Groundtruth)
     , ch2DeltaDelay_(0)
 
     , combineChannel_(false)
@@ -55,12 +57,14 @@ AppConfig::Load()
     ch1PortNum_    = root.elementsByTagName("CH1PortNumber").at(0).toElement().text();
     ch1DataType_   = (DataType)root.elementsByTagName("CH1DataType").at(0).toElement().text().toInt();
     ch1LoadFile_   = root.elementsByTagName("CH1LoadFile").at(0).toElement().text();
+    ch1PlaybackDataType_ = (DataType)root.elementsByTagName("CH1PlaybackDataType").at(0).toElement().text().toInt();
     ch1DeltaDelay_ = root.elementsByTagName("CH1DeltaDelay").at(0).toElement().text().toInt();
 
     ch2IPAddress_  = root.elementsByTagName("CH2IpAddress").at(0).toElement().text();
     ch2PortNum_    = root.elementsByTagName("CH2PortNumber").at(0).toElement().text();
     ch2DataType_   = (DataType)root.elementsByTagName("CH2DataType").at(0).toElement().text().toInt();
     ch2LoadFile_   = root.elementsByTagName("CH2LoadFile").at(0).toElement().text();
+    ch2PlaybackDataType_ = (DataType)root.elementsByTagName("CH2PlaybackDataType").at(0).toElement().text().toInt();
     ch2DeltaDelay_ = root.elementsByTagName("CH2DeltaDelay").at(0).toElement().text().toInt();
 
     combineChannel_ = root.elementsByTagName("CombineChannel").at(0).toElement().text() == "1" ? true : false;
@@ -103,12 +107,14 @@ AppConfig::Save()
     writer.writeTextElement("CH1PortNumber", ch1PortNum_);
     writer.writeTextElement("CH1DataType", QString::number(static_cast<int>(ch1DataType_)));
     writer.writeTextElement("CH1LoadFile", ch1LoadFile_);
+    writer.writeTextElement("CH1PlaybackDataType", QString::number(static_cast<int>(ch1PlaybackDataType_)));
     writer.writeTextElement("CH1DeltaDelay", QString::number(static_cast<int>(ch1DeltaDelay_)));
 
     writer.writeTextElement("CH2IpAddress", ch2IPAddress_);
     writer.writeTextElement("CH2PortNumber", ch2PortNum_);
     writer.writeTextElement("CH2DataType", QString::number(static_cast<int>(ch2DataType_)));
     writer.writeTextElement("CH2LoadFile", ch2LoadFile_);
+    writer.writeTextElement("CH2PlaybackDataType", QString::number(static_cast<int>(ch2PlaybackDataType_)));
     writer.writeTextElement("CH2DeltaDelay", QString::number(static_cast<int>(ch2DeltaDelay_)));
 
     writer.writeTextElement("CombineChannel", QString::number(combineChannel_));

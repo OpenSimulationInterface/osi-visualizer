@@ -326,29 +326,37 @@ MainWindow::CheckFieldsValidity()
     bool success (true);
     QString errMsg;
 
-    // IP address
-    QHostAddress ipAddress;
-    if(ipAddress.setAddress(ui_->ipAddress->text()) == false)
+    if(isSrcConnection_)
     {
-        errMsg += "  Invalid IP address!\n";
+        // IP address
+        QHostAddress ipAddress;
+        if(ipAddress.setAddress(ui_->ipAddress->text()) == false)
+        {
+            errMsg += "  Invalid IP address!\n";
+        }
+
+        // Port number
+        ui_->portNumber->text().toUInt(&success);
+        if(success == false)
+            errMsg += "  Port number should be valid integer!\n";
     }
-
-    // Port number
-    ui_->portNumber->text().toUInt(&success);
-    if(success == false)
-        errMsg += "  Port number should be valid integer!\n";
-
-    // Load file
-    if(QFileInfo::exists(ui_->loadFile->text()) == false)
+    else
     {
-        success = false;
-        errMsg += "  Load file doesn't exist!\n";
-    }
+        // Load file
+        if(QFileInfo::exists(ui_->loadFile->text()) == false)
+        {
+            success = false;
+            errMsg += "  Load file doesn't exist!\n";
+        }
 
-    // Delta delay
-    ui_->deltaDelay->text().toUInt(&success);
-    if(success == false)
-        errMsg += "  Port number should be valid positive integer!\n";
+        // Delta delay
+        if(ui_->deltaDelay->text().isEmpty() == false)
+        {
+            ui_->deltaDelay->text().toUInt(&success);
+            if(success == false)
+                errMsg += "  Port number should be valid positive integer!\n";
+        }
+    }
 
     if(errMsg.isEmpty() == false)
     {
@@ -365,29 +373,37 @@ MainWindow::CheckFieldsValidity2()
     bool success (true);
     QString errMsg;
 
-    // IP address
-    QHostAddress ipAddress;
-    if(ipAddress.setAddress(ui_->ipAddress_2->text()) == false)
+    if(isSrcConnection2_)
     {
-        errMsg += "  Invalid IP address!\n";
+        // IP address
+        QHostAddress ipAddress;
+        if(ipAddress.setAddress(ui_->ipAddress_2->text()) == false)
+        {
+            errMsg += "  Invalid IP address!\n";
+        }
+
+        // Port number
+        ui_->portNumber_2->text().toUInt(&success);
+        if(success == false)
+            errMsg += "  Port number should be valid integer!\n";
     }
-
-    // Port number
-    ui_->portNumber_2->text().toUInt(&success);
-    if(success == false)
-        errMsg += "  Port number should be valid integer!\n";
-
-    // Load file
-    if(QFileInfo::exists(ui_->loadFile_2->text()) == false)
+    else
     {
-        success = false;
-        errMsg += "  Load file doesn't exist!\n";
-    }
+        // Load file
+        if(QFileInfo::exists(ui_->loadFile_2->text()) == false)
+        {
+            success = false;
+            errMsg += "  Load file doesn't exist!\n";
+        }
 
-    // Delta delay
-    ui_->deltaDelay_2->text().toUInt(&success);
-    if(success == false)
-        errMsg += "  Port number should be valid positive integer!\n";
+        // Delta delay
+        if(ui_->deltaDelay_2->text().isEmpty() == false)
+        {
+            ui_->deltaDelay_2->text().toUInt(&success);
+            if(success == false)
+                errMsg += "  Port number should be valid positive integer!\n";
+        }
+    }
 
     if(errMsg.isEmpty() == false)
     {
@@ -600,6 +616,7 @@ MainWindow::EnablePlaybackGroup1(bool enable)
 {
     ui_->loadFile->setEnabled(enable);
     ui_->loadFileBrowse->setEnabled(enable);
+    ui_->playbackDataType->setEnabled(enable);
     ui_->deltaDelay->setEnabled(enable);
 }
 
@@ -608,6 +625,7 @@ MainWindow::EnablePlaybackGroup2(bool enable)
 {
     ui_->loadFile_2->setEnabled(enable);
     ui_->loadFileBrowse_2->setEnabled(enable);
+    ui_->playbackDataType_2->setEnabled(enable);
     ui_->deltaDelay_2->setEnabled(enable);
 }
 
@@ -764,6 +782,12 @@ MainWindow::UpdateConfigure()
         config_.ch1LoadFile_ = ui_->loadFile->text();
     }
 
+    if(config_.ch1PlaybackDataType_ != (DataType)ui_->playbackDataType->currentIndex())
+    {
+        hasChange = true;
+        config_.ch1PlaybackDataType_ = (DataType)ui_->playbackDataType->currentIndex();
+    }
+
     if(hasChange)
         config_.Save();
 
@@ -804,6 +828,12 @@ MainWindow::UpdateConfigure2()
         config_.ch2LoadFile_ = ui_->loadFile_2->text();
     }
 
+    if(config_.ch2PlaybackDataType_ != (DataType)ui_->playbackDataType_2->currentIndex())
+    {
+        hasChange = true;
+        config_.ch2PlaybackDataType_ = (DataType)ui_->playbackDataType_2->currentIndex();
+    }
+
     if(hasChange)
         config_.Save();
 
@@ -824,12 +854,14 @@ MainWindow::InitLoadConfigure()
         ui_->portNumber->setText(config_.ch1PortNum_);
         ui_->dataType->setCurrentIndex( static_cast<int>(config_.ch1DataType_) );
         ui_->loadFile->setText(config_.ch1LoadFile_);
+        ui_->playbackDataType->setCurrentIndex( static_cast<int>(config_.ch1PlaybackDataType_) );
         ui_->deltaDelay->setText(QString::number(config_.ch1DeltaDelay_));
 
         ui_->ipAddress_2->setText(config_.ch2IPAddress_);
         ui_->portNumber_2->setText(config_.ch2PortNum_);
         ui_->dataType_2->setCurrentIndex( static_cast<int>(config_.ch2DataType_) );
         ui_->loadFile_2->setText(config_.ch2LoadFile_);
+        ui_->playbackDataType_2->setCurrentIndex( static_cast<int>(config_.ch2PlaybackDataType_) );
         ui_->deltaDelay_2->setText(QString::number(config_.ch2DeltaDelay_));
 
         ui_->actionShowGrid->setChecked(config_.showGrid_);
@@ -866,6 +898,11 @@ MainWindow::InitComboBoxes()
     ui_->dataType->addItem("SensorData");
     ui_->dataType_2->addItem("GroundTruth");
     ui_->dataType_2->addItem("SensorData");
+
+    ui_->playbackDataType->addItem("GroundTruth");
+    ui_->playbackDataType->addItem("SensorData");
+    ui_->playbackDataType_2->addItem("GroundTruth");
+    ui_->playbackDataType_2->addItem("SensorData");
 }
 
 void
@@ -972,7 +1009,15 @@ MainWindow::Quit()
 {
     Stop();
     Stop2();
+    while(isConnected_ == true || isConnected2_ == true);
     QApplication::quit();
+}
+
+void
+MainWindow::closeEvent(QCloseEvent * event)
+{
+    Quit();
+    event->accept();
 }
 
 void
@@ -1068,7 +1113,8 @@ MainWindow::Play()
     }
     else
     {
-        emit StartPlaybackRequested(config_.ch1LoadFile_);
+        emit StartPlaybackRequested(config_.ch1LoadFile_,
+                                    config_.ch1PlaybackDataType_);
     }
 }
 
@@ -1112,7 +1158,8 @@ MainWindow::Play2()
     }
     else
     {
-        emit StartPlaybackRequested2(config_.ch2LoadFile_);
+        emit StartPlaybackRequested2(config_.ch2LoadFile_,
+                                     config_.ch1PlaybackDataType_);
     }
 }
 

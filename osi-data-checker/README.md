@@ -9,18 +9,18 @@ The first file is treated as a benchmark for the second file.
 
 The script should be run with python 2.7.
 The script expect at least two positional arguments. Both of those are osi-encoded messages.
-Thi first file is treated as a benchmark.
+The first file is treated as a benchmark.
 
-It can be run using the following command. 
-./compare_data.py input.txt input_2.txt 
+It can be run using the following command: <br />
+*./compare_data.py input.txt input_2.txt* <br />
 Because the parsing of the file takes significant amount of time it is recommended, at least for the initial tests, to restrict number of read messages.
 
 
 
 ### Command line options
--help -h Display help
--v Verbose mode - Display more informations 
--rl read line limit Limits the number of lines read from the input file. If set, only firs first X number of osi messages will be read. 
+*-h -help* Display help <br />
+*-v* "verbose mode", Display more informations  <br />
+*-rl* "read line limit", Limits the number of lines read from the input file. If set, only firs first X number of osi messages will be read. 
 
 
 ### Dependencies 

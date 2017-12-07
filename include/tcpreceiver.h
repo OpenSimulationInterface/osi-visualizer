@@ -32,7 +32,9 @@ class TCPReceiver : public QObject, public IMessageSource
 
     public slots:
         void DisconnectRequested();
-        void ConnectRequested(QString ipAddress, QString port, DataType dataType);
+        void ConnectRequested(const QString& ipAddress,
+                              const QString& port,
+                              DataType dataType);
 
     private:
 

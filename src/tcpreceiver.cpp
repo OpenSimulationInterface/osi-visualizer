@@ -31,8 +31,8 @@ TCPReceiver::TCPReceiver()
 
 // This function is called when the user presses the connect button
 void
-TCPReceiver::ConnectRequested(QString ipAddress,
-                              QString port,
+TCPReceiver::ConnectRequested(const QString &ipAddress,
+                              const QString &port,
                               DataType dataType)
 {
     currentDataType_ = dataType;

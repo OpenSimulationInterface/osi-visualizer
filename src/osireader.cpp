@@ -25,7 +25,7 @@ OsiReader::OsiReader(int *deltaDelay)
 }
 
 void
-OsiReader::StartReadFile(const QString& osiFileName)
+OsiReader::StartReadFile(const QString& osiFileName, const DataType dataType)
 {
     bool success(true);
     QString errMsg;
@@ -68,6 +68,7 @@ OsiReader::StartReadFile(const QString& osiFileName)
             int sliderRange = (stamp2Offset_.crbegin()->first)/1000000;
             emit UpdateSliderRange(sliderRange);
 
+            defaultDatatype_ = dataType;
             QtConcurrent::run(this, &OsiReader::SendMessageLoop);
         }
     }
@@ -115,6 +116,9 @@ OsiReader::SliderValueChanged(int newValue)
             break;
         }
     }
+
+    if(newIterStamp_ == stamp2Offset_.end())
+        newIterStamp_ = stamp2Offset_.begin();
 
     if(isPaused_)
     {
@@ -295,6 +299,7 @@ OsiReader::SendMessageLoop()
             std::string str_backup = "";
             size_t size_found;
 
+            uint64_t firstTimeStamp (0);
             uint64_t preTimeStamp (0);
             bool isFirstMessage (true);
 
@@ -326,6 +331,7 @@ OsiReader::SendMessageLoop()
 
                     if(isFirstMessage)
                     {
+                        firstTimeStamp = curStamp;
                         preTimeStamp = curStamp;
                         isFirstMessage = false;
                     }
@@ -342,7 +348,7 @@ OsiReader::SendMessageLoop()
                     MessageSendout(osiSD, defaultDatatype_);
 
                     // update slider value in millisecond level
-                    int sliderValue = curStamp / 1000000;
+                    int sliderValue = (curStamp - firstTimeStamp) / 1000000;
                     UpdateSliderValue(sliderValue);
 
                     ++iterStamp_;

@@ -41,14 +41,17 @@ class MainWindow : public QMainWindow
 
         void ConnectRequested(const QString& ipAddress,
                               const QString& port,
-                              const DataType& dataType);
+                              const DataType dataType);
 
         void ConnectRequested2(const QString& ipAddress,
                                const QString& port,
-                               const DataType& dataType);
+                               const DataType dataType);
 
-        void StartPlaybackRequested(const QString& fileName);
-        void StartPlaybackRequested2(const QString& fileName);
+        void StartPlaybackRequested(const QString& fileName,
+                                    const DataType dataType);
+
+        void StartPlaybackRequested2(const QString& fileName,
+                                     const DataType dataType);
 
     public slots:
         void EnableExport(bool enable);
@@ -108,6 +111,9 @@ class MainWindow : public QMainWindow
 
 
     private:
+
+        void closeEvent(QCloseEvent * event);
+
         void ConnectSignalsToSlots();
         void EnableSrcRadioButton(bool enable);
         void EnableSrcRadioButton2(bool enable);

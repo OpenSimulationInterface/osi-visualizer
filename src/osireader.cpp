@@ -286,6 +286,7 @@ void
 OsiReader::SendMessageLoop()
 {
     std::ifstream inputFile (osiFileName_.toStdString().c_str());
+    bool isFirstMessage (true);
 
     while(isRunning_)
     {
@@ -301,9 +302,9 @@ OsiReader::SendMessageLoop()
 
             uint64_t firstTimeStamp (0);
             uint64_t preTimeStamp (0);
-            bool isFirstMessage (true);
+            bool isRefreshMessage (true);
 
-            while(getline(inputFile, str_line_input) && !isPaused_)
+            while(getline(inputFile, str_line_input) && !isPaused_ && isRunning_)
             {
                 if(iterChanged_)
                     break;
@@ -332,9 +333,15 @@ OsiReader::SendMessageLoop()
                     if(isFirstMessage)
                     {
                         firstTimeStamp = curStamp;
-                        preTimeStamp = curStamp;
                         isFirstMessage = false;
                     }
+
+                    if(isRefreshMessage)
+                    {
+                        preTimeStamp = curStamp;
+                        isRefreshMessage = false;
+                    }
+
                     int64_t sleep = curStamp - preTimeStamp;
                     if(sleep < 0)
                         sleep = 0;

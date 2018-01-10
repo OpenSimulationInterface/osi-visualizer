@@ -40,11 +40,9 @@ class GLWidget : public QOpenGLWidget, protected QOpenGLFunctions_4_3_Core
         void SetTrackingEnabled(bool enable);
 
     public slots:
-//        void ZoomPlus();
-//        void ZoomMinus();
+
         void UpdateGrid();
         void Disconnected();
-//        void StopTracking();
         void StartTracking();
         void ResetCameraAll();
         void ResetCameraOrient();

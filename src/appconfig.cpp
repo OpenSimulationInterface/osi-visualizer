@@ -13,6 +13,8 @@ AppConfig::AppConfig(QString fileName)
     , ch1LoadFile_("")
     , ch1PlaybackDataType_(DataType::Groundtruth)
     , ch1DeltaDelay_(0)
+    , ch1EnableSendOut_(false)
+    , ch1SendOutPortNum_("5564")
 
     , ch2IPAddress_("")
     , ch2PortNum_("")
@@ -20,6 +22,8 @@ AppConfig::AppConfig(QString fileName)
     , ch2LoadFile_("")
     , ch2PlaybackDataType_(DataType::Groundtruth)
     , ch2DeltaDelay_(0)
+    , ch2EnableSendOut_(false)
+    , ch2SendOutPortNum_("5564")
 
     , combineChannel_(false)
     , showGrid_(true)
@@ -58,16 +62,20 @@ AppConfig::Load()
     ch1DataType_   = (DataType)root.elementsByTagName("CH1DataType").at(0).toElement().text().toInt();
     ch1LoadFile_   = root.elementsByTagName("CH1LoadFile").at(0).toElement().text();
     ch1PlaybackDataType_ = (DataType)root.elementsByTagName("CH1PlaybackDataType").at(0).toElement().text().toInt();
-    ch1DeltaDelay_ = root.elementsByTagName("CH1DeltaDelay").at(0).toElement().text().toInt();
+    ch1DeltaDelay_       = root.elementsByTagName("CH1DeltaDelay").at(0).toElement().text().toInt();
+    ch1EnableSendOut_    = root.elementsByTagName("CH1EnableSendOut").at(0).toElement().text() == "1" ? true : false;
+    ch1SendOutPortNum_   = root.elementsByTagName("CH1SendOutPortNumber").at(0).toElement().text();
 
     ch2IPAddress_  = root.elementsByTagName("CH2IpAddress").at(0).toElement().text();
     ch2PortNum_    = root.elementsByTagName("CH2PortNumber").at(0).toElement().text();
     ch2DataType_   = (DataType)root.elementsByTagName("CH2DataType").at(0).toElement().text().toInt();
     ch2LoadFile_   = root.elementsByTagName("CH2LoadFile").at(0).toElement().text();
     ch2PlaybackDataType_ = (DataType)root.elementsByTagName("CH2PlaybackDataType").at(0).toElement().text().toInt();
-    ch2DeltaDelay_ = root.elementsByTagName("CH2DeltaDelay").at(0).toElement().text().toInt();
+    ch2DeltaDelay_       = root.elementsByTagName("CH2DeltaDelay").at(0).toElement().text().toInt();
+    ch2EnableSendOut_    = root.elementsByTagName("CH2EnableSendOut").at(0).toElement().text() == "1" ? true : false;
+    ch2SendOutPortNum_   = root.elementsByTagName("CH2SendOutPortNumber").at(0).toElement().text();
 
-    combineChannel_ = root.elementsByTagName("CombineChannel").at(0).toElement().text() == "1" ? true : false;
+    combineChannel_    = root.elementsByTagName("CombineChannel").at(0).toElement().text() == "1" ? true : false;
     showGrid_          = root.elementsByTagName("ShowGrid").at(0).toElement().text() == "1" ? true : false;
     showObjectDetails_ = root.elementsByTagName("ShowObjectDetails").at(0).toElement().text() == "1" ? true : false;
     lockCamera_        = root.elementsByTagName("LockCamera").at(0).toElement().text() == "1" ? true : false;
@@ -109,6 +117,8 @@ AppConfig::Save()
     writer.writeTextElement("CH1LoadFile", ch1LoadFile_);
     writer.writeTextElement("CH1PlaybackDataType", QString::number(static_cast<int>(ch1PlaybackDataType_)));
     writer.writeTextElement("CH1DeltaDelay", QString::number(static_cast<int>(ch1DeltaDelay_)));
+    writer.writeTextElement("CH1EnableSendOut", QString::number(ch1EnableSendOut_));
+    writer.writeTextElement("CH1SendOutPortNumber", ch1SendOutPortNum_);
 
     writer.writeTextElement("CH2IpAddress", ch2IPAddress_);
     writer.writeTextElement("CH2PortNumber", ch2PortNum_);
@@ -116,6 +126,8 @@ AppConfig::Save()
     writer.writeTextElement("CH2LoadFile", ch2LoadFile_);
     writer.writeTextElement("CH2PlaybackDataType", QString::number(static_cast<int>(ch2PlaybackDataType_)));
     writer.writeTextElement("CH2DeltaDelay", QString::number(static_cast<int>(ch2DeltaDelay_)));
+    writer.writeTextElement("CH2EnableSendOut", QString::number(ch2EnableSendOut_));
+    writer.writeTextElement("CH2SendOutPortNumber", ch2SendOutPortNum_);
 
     writer.writeTextElement("CombineChannel", QString::number(combineChannel_));
     writer.writeTextElement("ShowGrid", QString::number(showGrid_));

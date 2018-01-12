@@ -87,7 +87,7 @@ TCPReceiver::DisconnectRequested()
     }
     catch (zmq::error_t& error)
     {
-        message = "Error connecting to endpoint: " + QString::fromUtf8(error.what());
+        message = "Error disconnecting endpoint: " + QString::fromUtf8(error.what());
     }
 
     isConnected_ = false;

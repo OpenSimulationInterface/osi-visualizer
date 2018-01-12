@@ -1,18 +1,22 @@
 
 #include <QtConcurrent/QtConcurrent>
 #include <QThread>
+#include <QMessageBox>
 
 #include <unistd.h>
 #include <iostream>
 
 #include "osireader.h"
 
-OsiReader::OsiReader(int *deltaDelay)
+OsiReader::OsiReader(int* deltaDelay,
+                     const bool& enableSendOut,
+                     const std::string& zmqPubPortNum)
     : IMessageSource()
     , isRunning_(false)
     , isReadTerminated_(false)
 
     , osiFileName_()
+    , osiHeaderName_()
     , stamp2Offset_()
     , iterStamp_()
     , iterMutex_()
@@ -20,65 +24,73 @@ OsiReader::OsiReader(int *deltaDelay)
     , newIterStamp_()
 
     , deltaDelay_(deltaDelay)
-{
 
+    , enableSendOut_(enableSendOut)
+    , zmqPubPortNumber_(zmqPubPortNum)
+    , zmqContext_(1)
+    , zmqPublisher_(zmqContext_, ZMQ_PUB)
+{
 }
 
 void
 OsiReader::StartReadFile(const QString& osiFileName, const DataType dataType)
 {
-    bool success(true);
-    QString errMsg;
+    zmqPublisher_.close();
+    QString errMsg = SetupConnection(true);
+    bool success = errMsg.isEmpty();
 
-    QFileInfo fInfo(osiFileName);
-    if(fInfo.exists())
+    if(success)
     {
-        osiFileName_ = osiFileName;
-        osiHeaderName_ = osiFileName + "h"; // .txth is header file
-
-        if(QFileInfo::exists(osiHeaderName_))
+        QFileInfo fInfo(osiFileName);
+        if(fInfo.exists())
         {
-            ReadHeader();
-        }
-        else
-        {
-            QFileInfo fPath(fInfo.path());
+            osiFileName_ = osiFileName;
+            osiHeaderName_ = osiFileName + "h"; // .txth is header file
 
-            if(fPath.isDir() && fPath.isWritable())
+            if(QFileInfo::exists(osiHeaderName_))
             {
-                success = CreateHeader(errMsg);
+                ReadHeader();
             }
             else
             {
-                success = false;
-                errMsg = "No access right to header file: " + osiHeaderName_ + "!\n";
+                QFileInfo fPath(fInfo.path());
+
+                if(fPath.isDir() && fPath.isWritable())
+                {
+                    success = CreateHeader(errMsg);
+                }
+                else
+                {
+                    success = false;
+                    errMsg = "No access right to header file: " + osiHeaderName_ + "!\n";
+                }
+            }
+
+            if(success)
+            {
+                isPaused_ = false;
+                isRunning_ = true;
+                iterStamp_ = stamp2Offset_.begin();
+
+                isConnected_ = true;
+                emit Connected(defaultDatatype_);
+
+                // update slider range in millisecond level
+                int sliderRange = (stamp2Offset_.crbegin()->first)/1000000;
+                emit UpdateSliderRange(sliderRange);
+
+                defaultDatatype_ = dataType;
+                QtConcurrent::run(this, &OsiReader::SendMessageLoop);
             }
         }
-
-        if(success)
+        else
         {
-            isPaused_ = false;
-            isRunning_ = true;
-            iterStamp_ = stamp2Offset_.begin();
-
-            isConnected_ = true;
-            emit Connected(defaultDatatype_);
-
-            // update slider range in millisecond level
-            int sliderRange = (stamp2Offset_.crbegin()->first)/1000000;
-            emit UpdateSliderRange(sliderRange);
-
-            defaultDatatype_ = dataType;
-            QtConcurrent::run(this, &OsiReader::SendMessageLoop);
+            success = false;
+            errMsg = "File: " + osiFileName + " doesn't exist! \n";
         }
     }
-    else
-    {
-        success = false;
-        errMsg = "File: " + osiFileName + " doesn't exist! \n";
-    }
 
-    if(success == false)
+    if(!success)
         emit Disconnected(errMsg);
 }
 
@@ -89,14 +101,17 @@ OsiReader::StopReadFile()
     {
         isReadTerminated_ = false;
         isRunning_ = false;
+        isPaused_ = false;
 
         while(!isReadTerminated_)
         {
             QThread::msleep(50);
         }
 
+        QString errMsg = SetupConnection(false);
+
         isConnected_ = false;
-        emit Disconnected();
+        emit Disconnected(errMsg);
     }
 }
 
@@ -153,6 +168,7 @@ OsiReader::SliderValueChanged(int newValue)
             {
                 uint64_t curStamp = GetTimeStampInNanoSecond(osiSD);
                 MessageSendout(osiSD, defaultDatatype_);
+                ZMQSendOutMessage(osiSD);
                 // update slider value in millisecond level
                 int sliderValue = curStamp / 1000000;
                 UpdateSliderValue(sliderValue);
@@ -353,7 +369,7 @@ OsiReader::SendMessageLoop()
                     preTimeStamp = curStamp;
 
                     MessageSendout(osiSD, defaultDatatype_);
-
+                    ZMQSendOutMessage(osiSD);
                     // update slider value in millisecond level
                     int sliderValue = (curStamp - firstTimeStamp) / 1000000;
                     UpdateSliderValue(sliderValue);
@@ -396,5 +412,54 @@ OsiReader::SendMessageLoop()
     isReadTerminated_ = true;
 }
 
+void
+OsiReader::ZMQSendOutMessage(const osi::SensorData& sd)
+{
+    if(enableSendOut_ && zmqPublisher_.connected())
+    {
+        std::string message = sd.SerializeAsString();
+        zmq::message_t zmqMessage(message.size());
+        memcpy(zmqMessage.data(), message.data(), message.size());
+        zmqPublisher_.send(zmqMessage);
+    }
+}
 
+QString
+OsiReader::SetupConnection(bool enable)
+{
+    QString errMsg;
+    if(enable && enableSendOut_)
+    {
+        if(!zmqPublisher_.connected())
+        {
+            zmqPublisher_ = zmq::socket_t(zmqContext_, ZMQ_PUB);
+            zmqPublisher_.setsockopt(ZMQ_LINGER, 100);
+            try
+            {
+                zmqPublisher_.bind("tcp://*:" + zmqPubPortNumber_);
+            }
+            catch (zmq::error_t& error)
+            {
+                zmqPublisher_.close();
+                errMsg = "Error connecting to endpoint: " + QString::fromUtf8(error.what());
+            }
+        }
+    }
+    else
+    {
+        if(zmqPublisher_.connected())
+        {
+            try
+            {
+                zmqPublisher_.close();
+            }
+            catch (zmq::error_t& error)
+            {
+                errMsg = "Error close connecting to endpoint: " + QString::fromUtf8(error.what());
+            }
+        }
+    }
+
+    return errMsg;
+}
 

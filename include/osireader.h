@@ -11,6 +11,8 @@
 #include <osi_version.pb.h>
 #include <osi_sensordata.pb.h>
 
+#include <zmq.hpp>
+
 #include <fstream>
 #include <iostream>
 #include <unistd.h>
@@ -27,7 +29,13 @@ class OsiReader: public QObject, public IMessageSource
     Q_OBJECT
 
     public:
-        OsiReader(int* deltaDelay);
+        OsiReader(int* deltaDelay,
+                  const bool& enableSendOut,
+                  const std::string& zmqPubPortNum);
+
+        QString SetupConnection(bool enable);
+
+        void SetSendOutPortNum(const std::string& port) { zmqPubPortNumber_ = port; }
 
         signals:
             void Connected(DataType dataType);
@@ -52,6 +60,8 @@ class OsiReader: public QObject, public IMessageSource
 
         void SendMessageLoop();
 
+        void ZMQSendOutMessage(const osi::SensorData& sd);
+
 
 
         bool isRunning_;
@@ -68,6 +78,11 @@ class OsiReader: public QObject, public IMessageSource
         std::vector<std::pair<uint64_t, std::streamoff> >::iterator newIterStamp_;
 
         const int* const deltaDelay_;
+
+        const bool&     enableSendOut_;
+        std::string     zmqPubPortNumber_;
+        zmq::context_t  zmqContext_;
+        zmq::socket_t   zmqPublisher_;
 
         // read from input file: data type is always SensorData
         DataType defaultDatatype_ = DataType::Groundtruth;

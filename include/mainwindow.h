@@ -97,6 +97,9 @@ class MainWindow : public QMainWindow
         void LoadFileEdited2(const QString& text);
         void LoadFileBrowse2();
 
+        void EnableSendToNetwork();
+        void EnableSendToNetwork2();
+
         void PlayPauseButtonClicked();
         void PlayPauseButtonClicked2();
 

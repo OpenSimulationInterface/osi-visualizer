@@ -47,12 +47,12 @@ MainWindow::MainWindow(QWidget *parent)
 
     , glWidget_(nullptr)
     , receiver_(new TCPReceiver())
-    , reader_(new OsiReader(&config_.ch1DeltaDelay_))
+    , reader_(new OsiReader(&config_.ch1DeltaDelay_, config_.ch1EnableSendOut_, config_.ch1SendOutPortNum_.toStdString()))
     , osiparser_(new OsiParser(config_.osiMsgSaveThreshold_))
 
     , glWidget2_(nullptr)
     , receiver2_(new TCPReceiver())
-    , reader2_(new OsiReader(&config_.ch2DeltaDelay_))
+    , reader2_(new OsiReader(&config_.ch2DeltaDelay_, config_.ch2EnableSendOut_, config_.ch2SendOutPortNum_.toStdString()))
     , osiparser2_(new OsiParser(config_.osiMsgSaveThreshold_))
 
     , colorWidgets_()
@@ -197,6 +197,18 @@ MainWindow::LoadFileBrowse2()
         ui_->loadFile_2->setText(fileName);
         ui_->loadFile_2->setToolTip(fileName);
     }
+}
+
+void
+MainWindow::EnableSendToNetwork()
+{
+    ui_->sendOutPortNum->setEnabled(ui_->enableSendToNetwork->checkState() == Qt::Checked);
+}
+
+void
+MainWindow::EnableSendToNetwork2()
+{
+    ui_->sendOutPortNum_2->setEnabled(ui_->enableSendToNetwork_2->checkState() == Qt::Checked);
 }
 
 void
@@ -432,10 +444,14 @@ MainWindow::ConnectSignalsToSlots()
     connect(ui_->rbPlayback_2,   &QRadioButton::clicked, this, &MainWindow::RBPlayback2);
 
     // load/save playback file
-    connect(ui_->loadFile,        &QLineEdit::textEdited, this, &MainWindow::LoadFileEdited);
+    connect(ui_->loadFile,         &QLineEdit::textEdited, this, &MainWindow::LoadFileEdited);
     connect(ui_->loadFileBrowse,   &QPushButton::clicked, this, &MainWindow::LoadFileBrowse);
-    connect(ui_->loadFile_2,      &QLineEdit::textEdited, this, &MainWindow::LoadFileEdited2);
+    connect(ui_->loadFile_2,       &QLineEdit::textEdited, this, &MainWindow::LoadFileEdited2);
     connect(ui_->loadFileBrowse_2, &QPushButton::clicked, this, &MainWindow::LoadFileBrowse2);
+
+    // enable sent out
+    connect(ui_->enableSendToNetwork, &QCheckBox::clicked, this, &MainWindow::EnableSendToNetwork);
+    connect(ui_->enableSendToNetwork_2, &QCheckBox::clicked, this, &MainWindow::EnableSendToNetwork2);
 
     // Play/Pause
     connect(ui_->playPauseButton,   &QToolButton::clicked, this, &MainWindow::PlayPauseButtonClicked);
@@ -617,6 +633,8 @@ MainWindow::EnablePlaybackGroup1(bool enable)
     ui_->loadFileBrowse->setEnabled(enable);
     ui_->playbackDataType->setEnabled(enable);
     ui_->deltaDelay->setEnabled(enable);
+    ui_->enableSendToNetwork->setEnabled(enable);
+    ui_->sendOutPortNum->setEnabled(enable && ui_->enableSendToNetwork->checkState() == Qt::Checked);
 }
 
 void
@@ -626,6 +644,8 @@ MainWindow::EnablePlaybackGroup2(bool enable)
     ui_->loadFileBrowse_2->setEnabled(enable);
     ui_->playbackDataType_2->setEnabled(enable);
     ui_->deltaDelay_2->setEnabled(enable);
+    ui_->enableSendToNetwork_2->setEnabled(enable);
+    ui_->sendOutPortNum_2->setEnabled(enable && ui_->enableSendToNetwork_2->checkState() == Qt::Checked);
 }
 
 void
@@ -756,6 +776,7 @@ bool
 MainWindow::UpdateConfigure()
 {
     bool hasChange (false);
+    bool saveChange (false);
 
     if(config_.ch1IPAddress_ != ui_->ipAddress->text())
     {
@@ -789,10 +810,24 @@ MainWindow::UpdateConfigure()
 
     if(config_.ch1DeltaDelay_ != ui_->deltaDelay->text().toInt())
     {
+        saveChange = true;
         config_.ch1DeltaDelay_ = ui_->deltaDelay->text().toInt();
-        config_.Save();
     }
-    else if(hasChange)
+
+    if(config_.ch1EnableSendOut_ != (ui_->enableSendToNetwork->checkState() == Qt::Checked))
+    {
+        saveChange = true;
+        config_.ch1EnableSendOut_ = (ui_->enableSendToNetwork->checkState() == Qt::Checked);
+    }
+
+    if(config_.ch1SendOutPortNum_ != ui_->sendOutPortNum->text())
+    {
+        saveChange = true;
+        config_.ch1SendOutPortNum_ = ui_->sendOutPortNum->text();
+        reader_->SetSendOutPortNum(config_.ch1SendOutPortNum_.toStdString());
+    }
+
+    if(hasChange || saveChange)
         config_.Save();
 
     return hasChange;
@@ -802,6 +837,7 @@ bool
 MainWindow::UpdateConfigure2()
 {
     bool hasChange (false);
+    bool saveChange (false);
 
     if(config_.ch2IPAddress_ != ui_->ipAddress_2->text())
     {
@@ -835,10 +871,24 @@ MainWindow::UpdateConfigure2()
 
     if(config_.ch2DeltaDelay_ != ui_->deltaDelay_2->text().toInt())
     {
+        saveChange = true;
         config_.ch2DeltaDelay_ = ui_->deltaDelay_2->text().toInt();
-        config_.Save();
     }
-    else if(hasChange)
+
+    if(config_.ch2EnableSendOut_ != (ui_->enableSendToNetwork_2->checkState() == Qt::Checked))
+    {
+        saveChange = true;
+        config_.ch2EnableSendOut_ = (ui_->enableSendToNetwork_2->checkState() == Qt::Checked);
+    }
+
+    if(config_.ch2SendOutPortNum_ != ui_->sendOutPortNum_2->text())
+    {
+        saveChange = true;
+        config_.ch2SendOutPortNum_ = ui_->sendOutPortNum_2->text();
+        reader2_->SetSendOutPortNum(config_.ch2SendOutPortNum_.toStdString());
+    }
+
+    if(hasChange || saveChange)
         config_.Save();
 
     return hasChange;
@@ -855,6 +905,12 @@ MainWindow::InitLoadConfigure()
         ui_->loadFile->setText(config_.ch1LoadFile_);
         ui_->playbackDataType->setCurrentIndex( static_cast<int>(config_.ch1PlaybackDataType_) );
         ui_->deltaDelay->setText(QString::number(config_.ch1DeltaDelay_));
+        if(config_.ch1EnableSendOut_)
+            ui_->enableSendToNetwork->setCheckState(Qt::Checked);
+        else
+            ui_->enableSendToNetwork->setCheckState(Qt::Unchecked);
+        ui_->sendOutPortNum->setText(config_.ch1SendOutPortNum_);
+        reader_->SetSendOutPortNum(config_.ch1SendOutPortNum_.toStdString());
 
         ui_->ipAddress_2->setText(config_.ch2IPAddress_);
         ui_->portNumber_2->setText(config_.ch2PortNum_);
@@ -862,6 +918,12 @@ MainWindow::InitLoadConfigure()
         ui_->loadFile_2->setText(config_.ch2LoadFile_);
         ui_->playbackDataType_2->setCurrentIndex( static_cast<int>(config_.ch2PlaybackDataType_) );
         ui_->deltaDelay_2->setText(QString::number(config_.ch2DeltaDelay_));
+        if(config_.ch2EnableSendOut_)
+            ui_->enableSendToNetwork_2->setCheckState(Qt::Checked);
+        else
+            ui_->enableSendToNetwork_2->setCheckState(Qt::Unchecked);
+        ui_->sendOutPortNum_2->setText(config_.ch2SendOutPortNum_);
+        reader2_->SetSendOutPortNum(config_.ch2SendOutPortNum_.toStdString());
 
         ui_->actionCombiCh->setChecked(config_.combineChannel_);
         ui_->actionShowGrid->setChecked(config_.showGrid_);
@@ -1122,6 +1184,8 @@ MainWindow::Play()
 void
 MainWindow::TogglePause()
 {
+    QString errMsg;
+
     if(isConnected_)
     {
         receiver_->isPaused_ = isPlaying_;
@@ -1129,10 +1193,23 @@ MainWindow::TogglePause()
 
     if(isPlayed_)
     {
-        reader_->isPaused_ = isPlaying_;
+        if(isPlaying_)
+        {
+            reader_->isPaused_ = true;
+            reader_->SetupConnection(false);
+        }
+        else
+        {
+            errMsg = reader_->SetupConnection(true);
+            if(errMsg.isEmpty())
+                reader_->isPaused_ = false;
+            else
+                ShowErrorMessage(errMsg);
+        }
     }
 
-    isPlaying_ = !isPlaying_;
+    if(errMsg.isEmpty())
+        isPlaying_ = !isPlaying_;
 }
 
 void
@@ -1167,17 +1244,31 @@ MainWindow::Play2()
 void
 MainWindow::TogglePause2()
 {
+    QString errMsg;
+
     if(isConnected2_)
     {
         receiver2_->isPaused_ = isPlaying2_;
     }
-
-    if(isPlayed2_)
+    else if(isPlayed2_)
     {
-        reader2_->isPaused_ = isPlaying2_;
+        if(isPlaying2_)
+        {
+            reader2_->isPaused_ = true;
+            reader2_->SetupConnection(false);
+        }
+        else
+        {
+            errMsg = reader2_->SetupConnection(true);
+            if(errMsg.isEmpty())
+                reader2_->isPaused_ = false;
+            else
+                ShowErrorMessage(errMsg);
+        }
     }
 
-    isPlaying2_ = !isPlaying2_;
+    if(errMsg.isEmpty())
+        isPlaying2_ = !isPlaying2_;
 }
 
 void
@@ -1269,7 +1360,8 @@ MainWindow::Disconnected2(const QString& message)
     UpdateCombineChannelMenu();
 }
 
-QString MainWindow::GetStringFromMilliSecond(int milliSec)
+QString
+MainWindow::GetStringFromMilliSecond(int milliSec)
 {
     QString varString;
 

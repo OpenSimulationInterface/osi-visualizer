@@ -24,6 +24,8 @@ class AppConfig
         QString  ch1LoadFile_;
         DataType ch1PlaybackDataType_;
         int      ch1DeltaDelay_;
+        bool     ch1EnableSendOut_;
+        QString  ch1SendOutPortNum_;
 
         QString  ch2IPAddress_;
         QString  ch2PortNum_;
@@ -31,6 +33,8 @@ class AppConfig
         QString  ch2LoadFile_;
         DataType ch2PlaybackDataType_;
         int      ch2DeltaDelay_;
+        bool     ch2EnableSendOut_;
+        QString  ch2SendOutPortNum_;
 
         bool combineChannel_;
         bool showGrid_;

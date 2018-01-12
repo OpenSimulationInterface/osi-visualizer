@@ -82,11 +82,10 @@ MainWindow::MainWindow(QWidget *parent)
     ui_->glLayout_2->addWidget(glWidget2_);
     glWidget2_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
-//    installEventFilter(this);
     ConnectSignalsToSlots();
-    InitLoadConfigure();
     InitComboBoxes();
     InitLaneTypeMenu();
+    InitLoadConfigure();
 
     QSurfaceFormat format;
     format.setDepthBufferSize(24);
@@ -788,13 +787,13 @@ MainWindow::UpdateConfigure()
         config_.ch1PlaybackDataType_ = (DataType)ui_->playbackDataType->currentIndex();
     }
 
-    if(hasChange)
-        config_.Save();
-
     if(config_.ch1DeltaDelay_ != ui_->deltaDelay->text().toInt())
     {
         config_.ch1DeltaDelay_ = ui_->deltaDelay->text().toInt();
+        config_.Save();
     }
+    else if(hasChange)
+        config_.Save();
 
     return hasChange;
 }
@@ -834,13 +833,13 @@ MainWindow::UpdateConfigure2()
         config_.ch2PlaybackDataType_ = (DataType)ui_->playbackDataType_2->currentIndex();
     }
 
-    if(hasChange)
-        config_.Save();
-
     if(config_.ch2DeltaDelay_ != ui_->deltaDelay_2->text().toInt())
     {
         config_.ch2DeltaDelay_ = ui_->deltaDelay_2->text().toInt();
+        config_.Save();
     }
+    else if(hasChange)
+        config_.Save();
 
     return hasChange;
 }
@@ -864,6 +863,7 @@ MainWindow::InitLoadConfigure()
         ui_->playbackDataType_2->setCurrentIndex( static_cast<int>(config_.ch2PlaybackDataType_) );
         ui_->deltaDelay_2->setText(QString::number(config_.ch2DeltaDelay_));
 
+        ui_->actionCombiCh->setChecked(config_.combineChannel_);
         ui_->actionShowGrid->setChecked(config_.showGrid_);
         ui_->actionShowObject->setChecked(config_.showObjectDetails_);
         ui_->actionLockCamera->setChecked(config_.lockCamera_);
@@ -988,6 +988,7 @@ void
 MainWindow::CombineChannels()
 {
     config_.combineChannel_ = !config_.combineChannel_;
+    config_.Save();
 }
 
 void

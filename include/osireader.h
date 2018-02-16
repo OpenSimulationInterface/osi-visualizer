@@ -60,7 +60,7 @@ class OsiReader: public QObject, public IMessageSource
 
         void SendMessageLoop();
 
-        void ZMQSendOutMessage(const osi::SensorData& sd);
+        void ZMQSendOutMessage(const std::string& message);
 
 
 

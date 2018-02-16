@@ -168,7 +168,7 @@ OsiReader::SliderValueChanged(int newValue)
             {
                 uint64_t curStamp = GetTimeStampInNanoSecond(osiSD);
                 MessageSendout(osiSD, defaultDatatype_);
-                ZMQSendOutMessage(osiSD);
+                ZMQSendOutMessage(str_line);
                 // update slider value in millisecond level
                 int sliderValue = curStamp / 1000000;
                 UpdateSliderValue(sliderValue);
@@ -369,7 +369,7 @@ OsiReader::SendMessageLoop()
                     preTimeStamp = curStamp;
 
                     MessageSendout(osiSD, defaultDatatype_);
-                    ZMQSendOutMessage(osiSD);
+                    ZMQSendOutMessage(str_line);
                     // update slider value in millisecond level
                     int sliderValue = (curStamp - firstTimeStamp) / 1000000;
                     UpdateSliderValue(sliderValue);
@@ -413,11 +413,10 @@ OsiReader::SendMessageLoop()
 }
 
 void
-OsiReader::ZMQSendOutMessage(const osi::SensorData& sd)
+OsiReader::ZMQSendOutMessage(const std::string& message)
 {
     if(enableSendOut_ && zmqPublisher_.connected())
     {
-        std::string message = sd.SerializeAsString();
         zmq::message_t zmqMessage(message.size());
         memcpy(zmqMessage.data(), message.data(), message.size());
         zmqPublisher_.send(zmqMessage);

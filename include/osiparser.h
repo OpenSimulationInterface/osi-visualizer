@@ -38,8 +38,7 @@ class OsiParser : public QObject
 
     private:
 
-        void ParseGroundtruth(Message& objectMessage,
-                              LaneMessage& laneMessage);
+        void ParseGroundtruth(Message& objectMessage, LaneMessage& laneMessage);
 
         void ParseGroundtruthMovingObject(Message& objectMessage,
                                           const osi::BaseMoving& baseObject,

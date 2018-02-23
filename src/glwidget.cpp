@@ -665,25 +665,6 @@ GLWidget::TreeItemClicked(QTreeWidgetItem* item, int column)
     this->update();
 }
 
-//void
-//GLWidget::ZoomPlus()
-//{
-//    Zoom(-20);
-//}
-//
-//void
-//GLWidget::ZoomMinus()
-//{
-//    Zoom(20);
-//}
-//
-//void
-//GLWidget::Zoom(float zoom)
-//{
-//    camera_->Translate(0, zoom, 0);
-//    this->update();
-//}
-
 void
 GLWidget::Connected(DataType dataType)
 {

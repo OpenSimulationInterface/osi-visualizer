@@ -162,10 +162,7 @@ OsiParser::ParseGroundtruth(Message& objectMessage,
                 centerLines.append(QVector3D(-centerLine.x(), 0, centerLine.y()));
             }
 
-            QVector<QVector<QVector3D> > dummyVector;
-            dummyVector.append(centerLines);
-
-            tmpLane.centerLanes= dummyVector;
+            tmpLane.centerLanes.append(centerLines);
         }
 
         // DRAW_LANE_BOUNDARIES
@@ -291,7 +288,8 @@ OsiParser::ParseSensorData(Message& objectMessage,
     for (int i = 0; i < currentSensorData_.object_size(); ++i)
     {
         osi::DetectedObject sensorDataObject = currentSensorData_.object(i);
-        if(sensorDataObject.model_internal_object().is_seen()){
+        if(sensorDataObject.model_internal_object().is_seen())
+        {
 
             ObjectType objectType = GetObjectTypeFromHighestProbability(sensorDataObject.class_probability());
 
@@ -306,82 +304,94 @@ OsiParser::ParseSensorData(Message& objectMessage,
         }
     }
 
+//    for (int i = 0; i < currentSensorData_.traffic_sign_size(); ++i)
+//    {
+//        osi::DetectedTrafficSign sensorDataSign = currentSensorData_.traffic_sign(i);
+//        osi::TrafficSign signToDisplay;
+//
+//        double highestProbCandidate = -1.0f;
+//        int signToDisplayID;
+//
+//        for(int j = 0; j < sensorDataSign.candidate_sign_size(); ++j)
+//        {
+//
+//            if(sensorDataSign.candidate_sign(j).candidate_probability() > highestProbCandidate)
+//            {
+//                signToDisplayID = j;
+//            }
+//        }
+//
+//        signToDisplay = sensorDataSign.mutable_candidate_sign(signToDisplayID)->sign();
+//
+//        QString idStr = QString::number(signToDisplay.id().value());
+//
+//        ParseSensorDataStationaryObject(objectMessage, signToDisplay.base(), ObjectType::TrafficSign, idStr);
+//    }
 
-    //TODO: expand SENSORDATA visualization to display lanes and signs and stuff
-
-    /*for (int i = 0; i < sensorData.traffic_sign_size(); ++i)
+    for (int i = 0; i < currentSensorData_.lane_size(); ++i)
     {
-        osi::DetectedTrafficSign sensorDataSign = sensorData.traffic_sign(i);
-        osi::TrafficSign signToDisplay;
-
-        double highestProbCandidate = -1.0f;
-        int signToDisplayID;
-
-        for(int j = 0; j < sensorDataSign.candidate_sign_size(); ++i)
+        osi::DetectedLane lane = currentSensorData_.lane(i);
+        if(lane.existence_probability() == 1)
         {
+            LaneStruct tmpLane;
+            tmpLane.id = lane.lane().id().value();
 
-            if(sensorDataSign.candidate_sign(j).candidate_probability() > highestProbCandidate)
+            // DRAW_CENTER_LINES
             {
-                signToDisplayID = j;
-            }
-        }
-
-        signToDisplay = sensorDataSign.mutable_candidate_sign(signToDisplayID)->sign();
-
-        QString idStr = QString::number(signToDisplay.id().value());
-
-        ParseSensorDataStationaryObject(objectMessage, signToDisplay.base(), TrafficSign, idStr);
-
-    }
-
-    for (int i = 0; i < sensorData.lane_size(); ++i)
-    {
-        osi::Lane lane = sensorData.lane(i).lane();
-        laneMessage->ids.append(lane.id().value());
-
-
-        if (DRAW_CENTER_LINES)
-        {
-            // lane <dummyVector <centerLines <position> > >
-            QVector<QVector3D> centerLines;
-            for (int a = 0; a < lane.center_line_size(); a++)
-            {
-                osi::Vector3d centerLine = lane.center_line(a);
-                //necessary because of differences between coordinate frames of OSI and graphical representation
-                centerLines.append(QVector3D(centerLine.x(), 0, -centerLine.y()));
-            }
-
-            QVector<QVector<QVector3D> > dummyVector;
-            dummyVector.append(centerLines);
-
-            laneMessage->lanes.append(dummyVector);
-        }
-
-        if (DRAW_LANE_BOUNDARIES)
-        {
-            // lanes <laneBoundaries <boundaryLines <position> > >
-            QVector<QVector<QVector3D>> laneBoundaries;
-
-            for (int b = 0; b < lane.lane_boundary_size(); b++)
-            {
-                osi::LaneBoundary laneBoundary = lane.lane_boundary(b);
-                QVector<QVector3D> boundaryLines;
-
-                for (int c = 0; c < laneBoundary.boundary_line_size(); c++)
+                // lane <dummyVector <centerLines <position> > >
+                QVector<QVector3D> centerLines;
+                for (int a = 0; a < lane.lane().center_line_size(); ++a)
                 {
-                    osi::BoundaryPoint boundaryLine = laneBoundary.boundary_line(c);
-                    osi::Vector3d position = boundaryLine.position();
-
-                    //necessary because of differences between coordinate frames of OSI and graphical representation
-                    boundaryLines.append(QVector3D(position.x(), 0, -position.y()));
+                    osi::Vector3d centerLine = lane.lane().center_line(a);
+                    if(centerLine.x() != 0 || centerLine.y() != 0 || centerLine.z() != 0)
+                    {
+                        centerLines.append(QVector3D(centerLine.x(), 0, -centerLine.y()));
+                    }
+                    else
+                    {
+                        tmpLane.centerLanes.append(centerLines);
+                        centerLine.Clear();
+                    }
                 }
 
-                laneBoundaries.append(boundaryLines);
+                tmpLane.centerLanes.append(centerLines);
             }
 
-            laneMessage->lanes.append(laneBoundaries);
+            // DRAW_LANE_BOUNDARIES
+            {
+                // lanes <laneBoundaries <boundaryLines <position> > >
+                QVector<QVector<QVector3D>> laneBoundaries;
+
+                for (int b = 0; b < lane.lane().lane_boundary_size(); ++b)
+                {
+                    osi::LaneBoundary laneBoundary = lane.lane().lane_boundary(b);
+                    QVector<QVector3D> boundaryLines;
+
+                    for (int c = 0; c < laneBoundary.boundary_line_size(); ++c)
+                    {
+                        osi::BoundaryPoint boundaryLine = laneBoundary.boundary_line(c);
+                        osi::Vector3d position = boundaryLine.position();
+
+                        if(position.x() != 0 || position.y() != 0 || position.z() != 0)
+                        {
+                            boundaryLines.append(QVector3D(position.x(), 0, -position.y()));
+                        }
+                        else
+                        {
+                            laneBoundaries.append(boundaryLines);
+                            boundaryLines.clear();
+                        }
+                    }
+
+                    laneBoundaries.append(boundaryLines);
+                }
+
+                tmpLane.boundaryLanes= laneBoundaries;
+            }
+
+            laneMessage.append(tmpLane);
         }
-    }*/
+    }
 }
 
 

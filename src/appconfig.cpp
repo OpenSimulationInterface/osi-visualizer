@@ -32,7 +32,7 @@ AppConfig::AppConfig(QString fileName)
     , laneType_(LaneType::BoundaryLanes)
     , typeColors_()
 
-    , osiMsgSaveThreshold_(200)
+    , osiMsgSaveThreshold_(1000)
     , srcPath_("./")
 
     , configFileName_(fileName)
@@ -80,6 +80,8 @@ AppConfig::Load()
     showObjectDetails_ = root.elementsByTagName("ShowObjectDetails").at(0).toElement().text() == "1" ? true : false;
     lockCamera_        = root.elementsByTagName("LockCamera").at(0).toElement().text() == "1" ? true : false;
     laneType_          = root.elementsByTagName("LaneType").at(0).toElement().text() == "0" ? LaneType::BoundaryLanes : LaneType::CenterLanes;
+
+    osiMsgSaveThreshold_ = root.elementsByTagName("OSIMsgSaveThreshold").at(0).toElement().text().toInt();
 
     QList<ObjectType> types = Global::GetAllObjectTypes();
     foreach (ObjectType type, types)
@@ -134,6 +136,8 @@ AppConfig::Save()
     writer.writeTextElement("ShowObjectDetails", QString::number(showObjectDetails_));
     writer.writeTextElement("LockCamera", QString::number(lockCamera_));
     writer.writeTextElement("LaneType", QString::number(static_cast<int>(laneType_)));
+
+    writer.writeTextElement("OSIMsgSaveThreshold", QString::number(static_cast<int>(osiMsgSaveThreshold_)));
 
     foreach (ObjectType key, typeColors_.keys())
     {

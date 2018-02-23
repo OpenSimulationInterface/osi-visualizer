@@ -58,7 +58,7 @@ class GLWidget : public QOpenGLWidget, protected QOpenGLFunctions_4_3_Core
         bool eventFilter(QObject* obj, QEvent* event);
 
     private:
-//        void Zoom(float zoom);
+
         void ResetObjectTextOrientations();
         void RenderObject(GLObject* object);
         void MouseWheel(QWheelEvent* event);

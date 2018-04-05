@@ -708,8 +708,7 @@ OsiReader::initializeFMU()
     //    #define FMI_STRING_ADDRESS_IDX 0
     //    #define FMI_STRING_PORT_IDX 1
     fmi2_string_t stringVars_[2];
-    stringVars_[0] = "*";
-//    stringVars_[0] = "127.0.0.1";
+    stringVars_[0] = "127.0.0.1";
     stringVars_[1] = pubPortNumber_.c_str();
     fmi2_status_t status2 = fmi2_import_set_string(fmu_, vr_, 2, stringVars_);
 

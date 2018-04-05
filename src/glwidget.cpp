@@ -3,6 +3,7 @@
 #include "gltriangle.h"
 #include "glpoint.h"
 #include "global.h"
+#include "glfieldofview.h"
 #include "customtreewidgetitem.h"
 
 //#include <QMutex>
@@ -40,6 +41,8 @@ GLWidget::GLWidget(QWidget* parent,
     , simulationObjects_()
     , shaderProgram_()
     , treeNodes_(treeNodes)
+    , showFOV_(false)
+    , objFOV_(nullptr)
 {
     installEventFilter(this);
 }
@@ -48,6 +51,24 @@ void
 GLWidget::UpdateIMessageSource(IMessageSource* msgSource)
 {
     msgSource_ = msgSource;
+}
+
+void
+GLWidget::UpdateFOVPaint(const bool showFOV)
+{
+    showFOV_ = showFOV;
+    this->update();
+}
+
+void
+GLWidget::UpdateFOVParam(const float minRadius,
+                         const float maxRadius,
+                         const float azimuthPosAngle,
+                         const float azimuthNegAngle)
+{
+    objFOV_->UpdateParameter(minRadius, maxRadius, azimuthPosAngle, azimuthNegAngle);
+    objFOV_->UpdateVertexBuffer();
+    UpdateFOVPaint(true);
 }
 
 void
@@ -110,8 +131,12 @@ GLWidget::initializeGL()
     center->Init();
     staticObjects_.append(center);
 
-    isOpenGLInitizalized_ = true;
+    objFOV_ = new GLFieldOfView(this, 0, 1, 1, -1);
+    objFOV_->SetColor(Qt::yellow);
+    objFOV_->SetOrientation(M_PI_2);
+    objFOV_->Init();
 
+    isOpenGLInitizalized_ = true;
 }
 
 void
@@ -149,7 +174,7 @@ GLWidget::paintGL()
             }
         }
     }
-        //mutex2.unlock();
+    //mutex2.unlock();
 
     // TODO: Mutex for object list?
     //mutex.lock();
@@ -163,6 +188,9 @@ GLWidget::paintGL()
             RenderObject(object->GetTextObject());
         }
     }
+
+    if(showFOV_)
+        RenderObject(objFOV_);
     //mutex.unlock();
 }
 
@@ -413,7 +441,25 @@ GLWidget::MessageParsed(const Message& message,
 
                     object->isVisible_ = true;
                     object->SetPosition(msg.position, false);
-                    object->SetOrientation(msg.orientation);
+
+                    if(msg.basePoly.size() == 4)
+                    {
+                        object->vertices_.clear();
+                        object->vertices_ << msg.basePoly[0] << msg.basePoly[1] << msg.basePoly[2] << msg.basePoly[3];
+                        object->SetOrientation(msg.orientation);
+                    }
+                    else
+                    {
+                        osi::Dimension3d dimension = msg.dimension;
+                        object->vertices_.clear();
+                        object->vertices_ << QVector3D(-dimension.width()/2, 0, dimension.length()/2)
+                                          << QVector3D(dimension.width()/2, 0, dimension.length()/2)
+                                          << QVector3D(dimension.width()/2, 0, -dimension.length()/2)
+                                          << QVector3D(-dimension.width()/2, 0, -dimension.length()/2);
+                        object->SetOrientation(msg.orientation + M_PI_2);
+                    }
+                    object->UpdateVertexBuffer();
+
                     if (object->GetTextObject())
                     {
                         object->GetTextObject()->isVisible_ = true;
@@ -451,7 +497,10 @@ GLWidget::MessageParsed(const Message& message,
                  type == ObjectType::MotorBike ||
                  type == ObjectType::Bicycle )
             {
-                newObject = new GLVehicle(this, msg.id, msg.dimension.length(), msg.dimension.width());
+                if(msg.basePoly.size() == 4)
+                    newObject = new GLVehicle(this, msg.id, msg.basePoly[0], msg.basePoly[1], msg.basePoly[2], msg.basePoly[3]);
+                else
+                    newObject = new GLVehicle(this, msg.id, msg.dimension.length(), msg.dimension.width());
             }
             else
             {
@@ -489,7 +538,7 @@ GLWidget::MessageParsed(const Message& message,
             currentObject->alreadyInObjectTree_ = true;
         }
 
-        if (currentDataType_ != DataType::SensorData && isFirstMsgReceived_ && msg.isEgoVehicle)
+        if (currentDataType_ != DataType::SensorData && isFirstMsgReceived_ && msg.isHostVehicle)
         {
             isFirstMsgReceived_ = false;
             selectedObject_ = currentObject;

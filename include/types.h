@@ -53,13 +53,14 @@ struct MessageStruct
     QString id;
     QString name;
     ObjectType type;
-    bool isEgoVehicle;
+    bool isHostVehicle;
     float orientation;
     QVector3D position;
     QVector3D realPosition;
     QVector3D velocitie;
     QVector3D acceleration;
     osi::Dimension3d dimension;
+    QVector<QVector3D> basePoly;
 };
 using Message = QVector<MessageStruct>;
 

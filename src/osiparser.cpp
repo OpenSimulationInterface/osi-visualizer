@@ -65,7 +65,7 @@ OsiParser::ParseReceivedMessage(const osi::SensorData& sensorData,
 
     if (currentDataType_ == DataType::Groundtruth)
     {
-        currentGroundTruth_ = *(currentSensorData_.mutable_ground_truth()->mutable_global_ground_truth());
+        currentGroundTruth_ = currentSensorData_.global_ground_truth();
         ParseGroundtruth(objectMessage, laneMessage);
     }
     else if (currentDataType_ == DataType::SensorData)
@@ -118,7 +118,7 @@ OsiParser::ParseGroundtruth(Message& objectMessage,
                                      vehicle.base(),
                                      objectType,
                                      idStr,
-                                     vehicle.ego_vehicle());
+                                     vehicle.host_vehicle());
     }
 
     for (int i = 0; i < currentGroundTruth_.traffic_sign_size(); ++i)
@@ -146,47 +146,41 @@ OsiParser::ParseGroundtruth(Message& objectMessage,
                                          false);
     }
 
+    // DRAW_CENTER_LINES
     for (int i = 0; i < currentGroundTruth_.lane_size(); ++i)
     {
-        osi::Lane lane = currentGroundTruth_.lane(i);
+        const osi::Lane& lane = currentGroundTruth_.lane(i);
         LaneStruct tmpLane;
         tmpLane.id = lane.id().value();
 
-        // DRAW_CENTER_LINES
+        QVector<QVector3D> centerLines;
+        for (int a = 0; a < lane.center_line_size(); ++a)
         {
-            // lane <dummyVector <centerLines <position> > >
-            QVector<QVector3D> centerLines;
-            for (int a = 0; a < lane.center_line_size(); ++a)
-            {
-                osi::Vector3d centerLine = lane.center_line(a);
-                centerLines.append(QVector3D(-centerLine.x(), 0, centerLine.y()));
-            }
-
-            tmpLane.centerLanes.append(centerLines);
+            const osi::Vector3d& centerLine = lane.center_line(a);
+            centerLines.append(QVector3D(centerLine.y(), 0, centerLine.x()));
         }
 
-        // DRAW_LANE_BOUNDARIES
+        tmpLane.centerLanes.append(centerLines);
+
+        laneMessage.append(tmpLane);
+    }
+
+    // DRAW_LANE_BOUNDARIES
+    for (int b = 0; b < currentGroundTruth_.lane_boundary_size(); ++b)
+    {
+        const osi::LaneBoundary& laneBoundary = currentGroundTruth_.lane_boundary(b);
+        LaneStruct tmpLane;
+        tmpLane.id = laneBoundary.id().value();
+
+        QVector<QVector3D> boundaryLines;
+        for (int c = 0; c < laneBoundary.boundary_line_size(); ++c)
         {
-            // lanes <laneBoundaries <boundaryLines <position> > >
-            QVector<QVector<QVector3D>> laneBoundaries;
-
-            for (int b = 0; b < lane.lane_boundary_size(); ++b)
-            {
-                osi::LaneBoundary laneBoundary = lane.lane_boundary(b);
-                QVector<QVector3D> boundaryLines;
-
-                for (int c = 0; c < laneBoundary.boundary_line_size(); ++c)
-                {
-                    osi::BoundaryPoint boundaryLine = laneBoundary.boundary_line(c);
-                    osi::Vector3d position = boundaryLine.position();
-                    boundaryLines.append(QVector3D(-position.x(), 0, position.y()));
-                }
-
-                laneBoundaries.append(boundaryLines);
-            }
-
-            tmpLane.boundaryLanes= laneBoundaries;
+            const osi::BoundaryPoint& boundaryLine = laneBoundary.boundary_line(c);
+            const osi::Vector3d& position = boundaryLine.position();
+            boundaryLines.append(QVector3D(position.y(), 0, position.x()));
         }
+
+        tmpLane.boundaryLanes.append(boundaryLines);
 
         laneMessage.append(tmpLane);
     }
@@ -199,7 +193,7 @@ OsiParser::ParseGroundtruthMovingObject(Message& objectMessage,
                                         const osi::BaseMoving& baseObject,
                                         const ObjectType objectType,
                                         const QString& idStr,
-                                        const bool isEgoVehicle)
+                                        const bool isHostVehicle)
 {
     if (objectType == ObjectType::None)
     {
@@ -222,9 +216,9 @@ OsiParser::ParseGroundtruthMovingObject(Message& objectMessage,
     tmpMsg.id = Global::GetObjectTypeName(objectType) + idStr;
     tmpMsg.name = "ID: " + idStr;
     tmpMsg.type = objectType;
-    tmpMsg.isEgoVehicle = isEgoVehicle;
-    tmpMsg.orientation = orientation;
-    tmpMsg.position = QVector3D(-position.x(), 0, position.y());
+    tmpMsg.isHostVehicle = isHostVehicle;
+    tmpMsg.orientation = orientation+M_PI_2;
+    tmpMsg.position = QVector3D(position.y(), 0, position.x());
     tmpMsg.realPosition = QVector3D(position.x(), position.y(), position.z());
     tmpMsg.velocitie = QVector3D(velocity.x(), velocity.y(), velocity.z());
     tmpMsg.acceleration = QVector3D(acceleration.x(), acceleration.y(), acceleration.z());
@@ -240,7 +234,7 @@ OsiParser::ParseGroundtruthStationaryObject(Message& objectMessage,
                                             const osi::BaseStationary& baseObject,
                                             const ObjectType objectType,
                                             const QString& idStr,
-                                            const bool isEgoVehicle)
+                                            const bool isHostVehicle)
 {
     if (objectType == ObjectType::None)
     {
@@ -268,9 +262,9 @@ OsiParser::ParseGroundtruthStationaryObject(Message& objectMessage,
     tmpMsg.id = Global::GetObjectTypeName(objectType) + idStr;
     tmpMsg.name = "ID: " + idStr;
     tmpMsg.type = objectType;
-    tmpMsg.isEgoVehicle = isEgoVehicle;
-    tmpMsg.orientation = orientation;
-    tmpMsg.position = QVector3D(-position.x(), 0, position.y());
+    tmpMsg.isHostVehicle = isHostVehicle;
+    tmpMsg.orientation = orientation+M_PI_2;
+    tmpMsg.position = QVector3D(position.y(), 0, position.x());
     tmpMsg.realPosition = QVector3D(position.x(), position.y(), position.z());
     tmpMsg.velocitie = QVector3D(velocity.x(), velocity.y(), velocity.z());
     tmpMsg.acceleration = QVector3D(acceleration.x(), acceleration.y(), acceleration.z());
@@ -304,92 +298,95 @@ OsiParser::ParseSensorData(Message& objectMessage,
         }
     }
 
-//    for (int i = 0; i < currentSensorData_.traffic_sign_size(); ++i)
-//    {
-//        osi::DetectedTrafficSign sensorDataSign = currentSensorData_.traffic_sign(i);
-//        osi::TrafficSign signToDisplay;
-//
-//        double highestProbCandidate = -1.0f;
-//        int signToDisplayID;
-//
-//        for(int j = 0; j < sensorDataSign.candidate_sign_size(); ++j)
-//        {
-//
-//            if(sensorDataSign.candidate_sign(j).candidate_probability() > highestProbCandidate)
-//            {
-//                signToDisplayID = j;
-//            }
-//        }
-//
-//        signToDisplay = sensorDataSign.mutable_candidate_sign(signToDisplayID)->sign();
-//
-//        QString idStr = QString::number(signToDisplay.id().value());
-//
-//        ParseSensorDataStationaryObject(objectMessage, signToDisplay.base(), ObjectType::TrafficSign, idStr);
-//    }
+    for (int i = 0; i < currentSensorData_.traffic_sign_size(); ++i)
+    {
+        osi::DetectedTrafficSign sensorDataSign = currentSensorData_.traffic_sign(i);
+        osi::TrafficSign signToDisplay;
 
+        double highestProbCandidate = -1.0f;
+        int signToDisplayID;
+
+        for(int j = 0; j < sensorDataSign.candidate_sign_size(); ++j)
+        {
+
+            if(sensorDataSign.candidate_sign(j).candidate_probability() > highestProbCandidate)
+            {
+                signToDisplayID = j;
+            }
+        }
+
+        signToDisplay = sensorDataSign.mutable_candidate_sign(signToDisplayID)->sign();
+
+        QString idStr = QString::number(signToDisplay.id().value());
+
+        ParseSensorDataStationaryObject(objectMessage, signToDisplay.base(), ObjectType::TrafficSign, idStr);
+
+    }
+
+    // DRAW_CENTER_LINES
     for (int i = 0; i < currentSensorData_.lane_size(); ++i)
     {
-        osi::DetectedLane lane = currentSensorData_.lane(i);
+        const osi::DetectedLane& lane = currentSensorData_.lane(i);
         if(lane.existence_probability() == 1)
         {
             LaneStruct tmpLane;
             tmpLane.id = lane.lane().id().value();
 
-            // DRAW_CENTER_LINES
+            QVector<QVector3D> centerLines;
+            for (int a = 0; a < lane.lane().center_line_size(); ++a)
             {
-                // lane <dummyVector <centerLines <position> > >
-                QVector<QVector3D> centerLines;
-                for (int a = 0; a < lane.lane().center_line_size(); ++a)
+                const osi::Vector3d& centerLine = lane.lane().center_line(a);
+                if(centerLine.x() != 0 || centerLine.y() != 0 || centerLine.z() != 0)
                 {
-                    osi::Vector3d centerLine = lane.lane().center_line(a);
-                    if(centerLine.x() != 0 || centerLine.y() != 0 || centerLine.z() != 0)
-                    {
-                        centerLines.append(QVector3D(centerLine.x(), 0, -centerLine.y()));
-                    }
-                    else
-                    {
-                        tmpLane.centerLanes.append(centerLines);
-                        centerLine.Clear();
-                    }
+                    centerLines.append(QVector3D(centerLine.x(), 0, -centerLine.y()));
                 }
-
+                else if(!centerLines.empty())
+                {
+                    tmpLane.centerLanes.append(centerLines);
+                    centerLines.clear();
+                }
+            }
+            if(!centerLines.empty())
                 tmpLane.centerLanes.append(centerLines);
-            }
 
-            // DRAW_LANE_BOUNDARIES
+            if(!tmpLane.centerLanes.empty())
+                laneMessage.append(tmpLane);
+        }
+    }
+
+    // DRAW_LANE_BOUNDARIES
+    for (int i = 0; i < currentSensorData_.lane_boundary_size(); ++i)
+    {
+        const osi::DetectedLaneBoundary& dLaneB = currentSensorData_.lane_boundary(i);
+        if(dLaneB.existence_probability() == 1)
+        {
+            const osi::LaneBoundary& laneB = dLaneB.lane_boundary();
+            LaneStruct tmpLane;
+            tmpLane.id = dLaneB.tracking_id().value();
+
+            QVector<QVector3D> boundaryLines;
+
+            for (int c = 0; c < laneB.boundary_line_size(); ++c)
             {
-                // lanes <laneBoundaries <boundaryLines <position> > >
-                QVector<QVector<QVector3D>> laneBoundaries;
+                const osi::BoundaryPoint& boundaryLine = laneB.boundary_line(c);
+                const osi::Vector3d& position = boundaryLine.position();
 
-                for (int b = 0; b < lane.lane().lane_boundary_size(); ++b)
+                if(position.x() != 0 || position.y() != 0 || position.z() != 0)
                 {
-                    osi::LaneBoundary laneBoundary = lane.lane().lane_boundary(b);
-                    QVector<QVector3D> boundaryLines;
-
-                    for (int c = 0; c < laneBoundary.boundary_line_size(); ++c)
-                    {
-                        osi::BoundaryPoint boundaryLine = laneBoundary.boundary_line(c);
-                        osi::Vector3d position = boundaryLine.position();
-
-                        if(position.x() != 0 || position.y() != 0 || position.z() != 0)
-                        {
-                            boundaryLines.append(QVector3D(position.x(), 0, -position.y()));
-                        }
-                        else
-                        {
-                            laneBoundaries.append(boundaryLines);
-                            boundaryLines.clear();
-                        }
-                    }
-
-                    laneBoundaries.append(boundaryLines);
+                    boundaryLines.append(QVector3D(position.y(), 0, position.x()));
                 }
-
-                tmpLane.boundaryLanes= laneBoundaries;
+                else if(!boundaryLines.empty())
+                {
+                    tmpLane.boundaryLanes.append(boundaryLines);
+                    boundaryLines.clear();
+                }
             }
 
-            laneMessage.append(tmpLane);
+            if(!boundaryLines.empty())
+                tmpLane.boundaryLanes.append(boundaryLines);
+
+            if(!tmpLane.boundaryLanes.empty())
+                laneMessage.append(tmpLane);
         }
     }
 }
@@ -416,25 +413,36 @@ OsiParser::ParseSensorDataMovingObject(Message& objectMessage,
     osi::Vector3d velocity = baseObject.velocity();
     osi::Vector3d acceleration = baseObject.acceleration();
     float orientation = baseObject.orientation().yaw();
-    osi::Dimension3d dimension = baseObject.dimension();
-
-    if (dimension.width() == 0 && dimension.length() == 0)
-    {
-        dimension.set_width(1.0f);
-        dimension.set_length(1.0f);
-    }
 
     MessageStruct tmpMsg;
     tmpMsg.id = Global::GetObjectTypeName(objectType) + idStr;
     tmpMsg.name = "ID: " + idStr;
     tmpMsg.type = objectType;
-    tmpMsg.isEgoVehicle = false;
+    tmpMsg.isHostVehicle = false;
     tmpMsg.orientation = orientation;
     tmpMsg.position = QVector3D(position.x(), 0, -position.y());
     tmpMsg.realPosition = QVector3D(position.x(), position.y(), position.z());
     tmpMsg.velocitie = QVector3D(velocity.x(), velocity.y(), velocity.z());
     tmpMsg.acceleration = QVector3D(acceleration.x(), acceleration.y(), acceleration.z());
-    tmpMsg.dimension = dimension;
+    
+    if(baseObject.base_polygon_size() == 4)
+    {
+        for(int i = 0; i < 4; ++i)
+        {
+            const osi::Vector2d& vertice = baseObject.base_polygon(i);
+            tmpMsg.basePoly.push_back(QVector3D(vertice.x() - position.x(), 0, -vertice.y()+position.y()));
+        }
+    }
+    else
+    {
+        osi::Dimension3d dimension = baseObject.dimension();
+        if (dimension.width() == 0 && dimension.length() == 0)
+        {
+            dimension.set_width(1.0f);
+            dimension.set_length(1.0f);
+        }
+        tmpMsg.dimension = dimension;
+    }
 
     objectMessage.append(tmpMsg);
 }
@@ -459,26 +467,37 @@ OsiParser::ParseSensorDataStationaryObject(Message& objectMessage,
     osi::Vector3d velocity = tmp;
     osi::Vector3d acceleration = tmp;
     float orientation = baseObject.orientation().yaw();
-    osi::Dimension3d dimension = baseObject.dimension();
-
-    if (dimension.width() == 0 && dimension.length() == 0)
-    {
-        dimension.set_width(1.0f);
-        dimension.set_length(1.0f);
-    }
 
     MessageStruct tmpMsg;
     tmpMsg.id = Global::GetObjectTypeName(objectType) + idStr;
     tmpMsg.name = "ID: " + idStr;
     tmpMsg.type = objectType;
-    tmpMsg.isEgoVehicle = false;
+    tmpMsg.isHostVehicle = false;
     tmpMsg.orientation = orientation;
     tmpMsg.position = QVector3D(position.x(), 0, -position.y());
     tmpMsg.realPosition = QVector3D(position.x(), position.y(), position.z());
     tmpMsg.velocitie = QVector3D(velocity.x(), velocity.y(), velocity.z());
     tmpMsg.acceleration = QVector3D(acceleration.x(), acceleration.y(), acceleration.z());
-    tmpMsg.dimension = dimension;
-
+    
+    if(baseObject.base_polygon_size() == 4)
+    {
+        for(int i = 0; i < 4; ++i)
+        {
+            const osi::Vector2d& vertice = baseObject.base_polygon(i);
+            tmpMsg.basePoly.push_back(QVector3D(vertice.x(), 0, -vertice.y()));
+        }
+    }
+    else
+    {
+        osi::Dimension3d dimension = baseObject.dimension();
+        if (dimension.width() == 0 && dimension.length() == 0)
+        {
+            dimension.set_width(1.0f);
+            dimension.set_length(1.0f);
+        }
+        tmpMsg.dimension = dimension;
+    }
+    
     objectMessage.append(tmpMsg);
 }
 
@@ -536,7 +555,7 @@ OsiParser::GetObjectTypeFromOsiVehicleType(const osi::Vehicle_Type vehicleType)
         case osi::Vehicle_Type_TYPE_TRUCK:
             objType = ObjectType::Truck;
             break;
-        case osi::Vehicle_Type_TYPE_MOTOR_BIKE:
+        case osi::Vehicle_Type_TYPE_MOTORBIKE:
             objType = ObjectType::MotorBike;
             break;
         case osi::Vehicle_Type_TYPE_BICYCLE:

@@ -31,6 +31,8 @@ set(SOURCES
     src/gltrafficsign.cpp
     src/qrc_resources.cpp
     src/osiparser.cpp
+    src/glfieldofview.cpp
+    src/fmureceiver.cpp
 )
 
 set(HEADERS
@@ -55,9 +57,20 @@ set(HEADERS
     include/glpoint.h
     include/gltrafficsign.h
     include/osiparser.h
+    include/glfieldofview.h
+    include/fmureceiver.h
 )
 
-include_directories(include)
+
+include_directories(
+    /usr/local/include/fmi-library
+    ${CMAKE_CURRENT_LIST_DIR}/include
+)
+
+link_directories(
+    /usr/local/lib/fmi-library
+)
+
 
 add_executable(${PROJECT_NAME}
     ${HEADERS}
@@ -72,7 +85,9 @@ target_link_libraries(${PROJECT_NAME}
     Qt5::OpenGL
     Qt5::Network
 
-    open_simulation_interface_pic
+    open_simulation_interface
+    fmilib_shared
     protobuf
     zmq
 )
+

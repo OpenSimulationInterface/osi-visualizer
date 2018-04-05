@@ -60,6 +60,7 @@ struct MessageStruct
     QVector3D velocitie;
     QVector3D acceleration;
     osi::Dimension3d dimension;
+    QVector<QVector3D> basePoly;
 };
 using Message = QVector<MessageStruct>;
 

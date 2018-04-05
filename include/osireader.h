@@ -8,8 +8,8 @@
 
 #pragma once
 
-#include <osi_version.pb.h>
-#include <osi_sensordata.pb.h>
+#include <osi/osi_version.pb.h>
+#include <osi/osi_sensordata.pb.h>
 
 #include <zmq.hpp>
 
@@ -24,6 +24,24 @@
 #include "types.h"
 
 
+
+extern "C" {
+#include <JM/jm_portability.h>
+#include <fmilib.h>
+}
+
+#define FMI_INTEGER_SENSORDATA_IN_BASELO_IDX 0
+#define FMI_INTEGER_SENSORDATA_IN_BASEHI_IDX 1
+#define FMI_INTEGER_SENSORDATA_IN_SIZE_IDX 2
+#define FMI_INTEGER_SENSORDATA_OUT_BASELO_IDX 3
+#define FMI_INTEGER_SENSORDATA_OUT_BASEHI_IDX 4
+#define FMI_INTEGER_SENSORDATA_OUT_SIZE_IDX 5
+#define FMI_INTEGER_LAST_IDX FMI_INTEGER_SENSORDATA_OUT_SIZE_IDX
+#define FMI_INTEGER_VARS (FMI_INTEGER_LAST_IDX + 1)
+
+
+
+
 class OsiReader: public QObject, public IMessageSource
 {
     Q_OBJECT
@@ -31,11 +49,13 @@ class OsiReader: public QObject, public IMessageSource
     public:
         OsiReader(int* deltaDelay,
                   const bool& enableSendOut,
-                  const std::string& zmqPubPortNum);
+                  const std::string& pubPortNum,
+                  const bool &enalbeFMU,
+                  const std::string &fmuPath = "");
 
         QString SetupConnection(bool enable);
 
-        void SetSendOutPortNum(const std::string& port) { zmqPubPortNumber_ = port; }
+        void SetSendOutPortNum(const std::string& port) { pubPortNumber_ = port; }
 
         signals:
             void Connected(DataType dataType);
@@ -46,7 +66,9 @@ class OsiReader: public QObject, public IMessageSource
                                 const DataType datatype);
 
     public slots:
-            void StartReadFile(const QString& osiFileName, const DataType dataType);
+            void StartReadFile(const QString& osiFileName,
+                               const DataType dataType,
+                               const QString& fmuPath);
             void StopReadFile();
             void SliderValueChanged(int newValue);
 
@@ -59,8 +81,12 @@ class OsiReader: public QObject, public IMessageSource
         void SaveHeader();
 
         void SendMessageLoop();
+        void SendOutMessage(const std::string& message);
 
-        void ZMQSendOutMessage(const std::string& message);
+        QString SetZMQConnection();
+        QString FreeZMQConnection();
+        QString SetFMUConnection();
+        void FreeFMUConnection();
 
 
 
@@ -80,9 +106,45 @@ class OsiReader: public QObject, public IMessageSource
         const int* const deltaDelay_;
 
         const bool&     enableSendOut_;
-        std::string     zmqPubPortNumber_;
+        std::string     pubPortNumber_;
+        std::string     currentBuffer_;
+
+        // ZMQ
         zmq::context_t  zmqContext_;
         zmq::socket_t   zmqPublisher_;
+
+        // FMU
+        const bool&    enableFMU_;
+        fmi2_import_t* fmu_;
+        fmi2_callback_functions_t callBackFunctions_;
+        jm_callbacks callbacks_;
+        fmi_import_context_t* fmuContext_;
+        jm_status_enu_t jmStatus_;
+        fmi2_status_t fmiStatus_;
+        fmi2_real_t tStart_;
+        fmi2_real_t tEnd_;
+        fmi2_real_t tCurrent_;
+        fmi2_real_t hStep_;
+        std::string FMUPath_;
+        std::string tmpPath_;
+        enum class LogLevel
+        {
+            Warn,
+            Debug
+        };
+        LogLevel logLevel_;
+        fmi2_value_reference_t vr_[FMI_INTEGER_VARS];
+        fmi2_integer_t integerVars_[FMI_INTEGER_VARS];
+
+        // Initialize fmu wrapper specific logger, create fmi import context and check fmi version
+        bool initializeFMUWrapper();
+        // import fmu binary file
+        bool importFMU();
+        // setup and Initialize FMU
+        bool initializeFMU();
+        // protobuf accessors
+        void set_fmi_sensor_data_out();
+
 
         // read from input file: data type is always SensorData
         DataType defaultDatatype_ = DataType::Groundtruth;

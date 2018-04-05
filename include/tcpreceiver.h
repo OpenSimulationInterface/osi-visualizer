@@ -26,7 +26,6 @@ class TCPReceiver : public QObject, public IMessageSource
         signals:
             void Connected(DataType dataType);
             void Disconnected(const QString& message = "");
-            void ExportOsiMessage();
             void MessageReceived(const osi::SensorData& sensorData,
                                  const DataType datatype);
 
@@ -51,4 +50,6 @@ class TCPReceiver : public QObject, public IMessageSource
         zmq::socket_t socket_;
         DataType currentDataType_;
 };
+
+
 

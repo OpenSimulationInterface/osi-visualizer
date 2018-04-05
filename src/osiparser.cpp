@@ -65,7 +65,7 @@ OsiParser::ParseReceivedMessage(const osi::SensorData& sensorData,
 
     if (currentDataType_ == DataType::Groundtruth)
     {
-        currentGroundTruth_ = *(currentSensorData_.mutable_ground_truth()->mutable_global_ground_truth());
+        currentGroundTruth_ = currentSensorData_.global_ground_truth();
         ParseGroundtruth(objectMessage, laneMessage);
     }
     else if (currentDataType_ == DataType::SensorData)
@@ -118,7 +118,7 @@ OsiParser::ParseGroundtruth(Message& objectMessage,
                                      vehicle.base(),
                                      objectType,
                                      idStr,
-                                     vehicle.ego_vehicle());
+                                     vehicle.host_vehicle());
     }
 
     for (int i = 0; i < currentGroundTruth_.traffic_sign_size(); ++i)
@@ -146,36 +146,41 @@ OsiParser::ParseGroundtruth(Message& objectMessage,
                                          false);
     }
 
+    // DRAW_CENTER_LINES
     for (int i = 0; i < currentGroundTruth_.lane_size(); ++i)
     {
         const osi::Lane& lane = currentGroundTruth_.lane(i);
         LaneStruct tmpLane;
         tmpLane.id = lane.id().value();
 
-        // DRAW_CENTER_LINES
         QVector<QVector3D> centerLines;
         for (int a = 0; a < lane.center_line_size(); ++a)
         {
             const osi::Vector3d& centerLine = lane.center_line(a);
             centerLines.append(QVector3D(centerLine.y(), 0, centerLine.x()));
         }
+
         tmpLane.centerLanes.append(centerLines);
 
-        // DRAW_LANE_BOUNDARIES
-        for (int b = 0; b < lane.lane_boundary_size(); ++b)
+        laneMessage.append(tmpLane);
+    }
+
+    // DRAW_LANE_BOUNDARIES
+    for (int b = 0; b < currentGroundTruth_.lane_boundary_size(); ++b)
+    {
+        const osi::LaneBoundary& laneBoundary = currentGroundTruth_.lane_boundary(b);
+        LaneStruct tmpLane;
+        tmpLane.id = laneBoundary.id().value();
+
+        QVector<QVector3D> boundaryLines;
+        for (int c = 0; c < laneBoundary.boundary_line_size(); ++c)
         {
-            const osi::LaneBoundary& laneBoundary = lane.lane_boundary(b);
-            QVector<QVector3D> boundaryLines;
-
-            for (int c = 0; c < laneBoundary.boundary_line_size(); ++c)
-            {
-                const osi::BoundaryPoint& boundaryLine = laneBoundary.boundary_line(c);
-                const osi::Vector3d& position = boundaryLine.position();
-                boundaryLines.append(QVector3D(position.y(), 0, position.x()));
-            }
-
-            tmpLane.boundaryLanes.append(boundaryLines);
+            const osi::BoundaryPoint& boundaryLine = laneBoundary.boundary_line(c);
+            const osi::Vector3d& position = boundaryLine.position();
+            boundaryLines.append(QVector3D(position.y(), 0, position.x()));
         }
+
+        tmpLane.boundaryLanes.append(boundaryLines);
 
         laneMessage.append(tmpLane);
     }
@@ -188,7 +193,7 @@ OsiParser::ParseGroundtruthMovingObject(Message& objectMessage,
                                         const osi::BaseMoving& baseObject,
                                         const ObjectType objectType,
                                         const QString& idStr,
-                                        const bool isEgoVehicle)
+                                        const bool isHostVehicle)
 {
     if (objectType == ObjectType::None)
     {
@@ -211,7 +216,7 @@ OsiParser::ParseGroundtruthMovingObject(Message& objectMessage,
     tmpMsg.id = Global::GetObjectTypeName(objectType) + idStr;
     tmpMsg.name = "ID: " + idStr;
     tmpMsg.type = objectType;
-    tmpMsg.isEgoVehicle = isEgoVehicle;
+    tmpMsg.isHostVehicle = isHostVehicle;
     tmpMsg.orientation = orientation+M_PI_2;
     tmpMsg.position = QVector3D(position.y(), 0, position.x());
     tmpMsg.realPosition = QVector3D(position.x(), position.y(), position.z());
@@ -229,7 +234,7 @@ OsiParser::ParseGroundtruthStationaryObject(Message& objectMessage,
                                             const osi::BaseStationary& baseObject,
                                             const ObjectType objectType,
                                             const QString& idStr,
-                                            const bool isEgoVehicle)
+                                            const bool isHostVehicle)
 {
     if (objectType == ObjectType::None)
     {
@@ -257,7 +262,7 @@ OsiParser::ParseGroundtruthStationaryObject(Message& objectMessage,
     tmpMsg.id = Global::GetObjectTypeName(objectType) + idStr;
     tmpMsg.name = "ID: " + idStr;
     tmpMsg.type = objectType;
-    tmpMsg.isEgoVehicle = isEgoVehicle;
+    tmpMsg.isHostVehicle = isHostVehicle;
     tmpMsg.orientation = orientation+M_PI_2;
     tmpMsg.position = QVector3D(position.y(), 0, position.x());
     tmpMsg.realPosition = QVector3D(position.x(), position.y(), position.z());
@@ -293,30 +298,32 @@ OsiParser::ParseSensorData(Message& objectMessage,
         }
     }
 
-//    for (int i = 0; i < currentSensorData_.traffic_sign_size(); ++i)
-//    {
-//        osi::DetectedTrafficSign sensorDataSign = currentSensorData_.traffic_sign(i);
-//        osi::TrafficSign signToDisplay;
-//
-//        double highestProbCandidate = -1.0f;
-//        int signToDisplayID;
-//
-//        for(int j = 0; j < sensorDataSign.candidate_sign_size(); ++j)
-//        {
-//
-//            if(sensorDataSign.candidate_sign(j).candidate_probability() > highestProbCandidate)
-//            {
-//                signToDisplayID = j;
-//            }
-//        }
-//
-//        signToDisplay = sensorDataSign.mutable_candidate_sign(signToDisplayID)->sign();
-//
-//        QString idStr = QString::number(signToDisplay.id().value());
-//
-//        ParseSensorDataStationaryObject(objectMessage, signToDisplay.base(), ObjectType::TrafficSign, idStr);
-//    }
+    for (int i = 0; i < currentSensorData_.traffic_sign_size(); ++i)
+    {
+        osi::DetectedTrafficSign sensorDataSign = currentSensorData_.traffic_sign(i);
+        osi::TrafficSign signToDisplay;
 
+        double highestProbCandidate = -1.0f;
+        int signToDisplayID;
+
+        for(int j = 0; j < sensorDataSign.candidate_sign_size(); ++j)
+        {
+
+            if(sensorDataSign.candidate_sign(j).candidate_probability() > highestProbCandidate)
+            {
+                signToDisplayID = j;
+            }
+        }
+
+        signToDisplay = sensorDataSign.mutable_candidate_sign(signToDisplayID)->sign();
+
+        QString idStr = QString::number(signToDisplay.id().value());
+
+        ParseSensorDataStationaryObject(objectMessage, signToDisplay.base(), ObjectType::TrafficSign, idStr);
+
+    }
+
+    // DRAW_CENTER_LINES
     for (int i = 0; i < currentSensorData_.lane_size(); ++i)
     {
         const osi::DetectedLane& lane = currentSensorData_.lane(i);
@@ -325,7 +332,6 @@ OsiParser::ParseSensorData(Message& objectMessage,
             LaneStruct tmpLane;
             tmpLane.id = lane.lane().id().value();
 
-            // DRAW_CENTER_LINES
             QVector<QVector3D> centerLines;
             for (int a = 0; a < lane.lane().center_line_size(); ++a)
             {
@@ -343,42 +349,55 @@ OsiParser::ParseSensorData(Message& objectMessage,
             if(!centerLines.empty())
                 tmpLane.centerLanes.append(centerLines);
 
-            // DRAW_LANE_BOUNDARIES
-            for (int b = 0; b < lane.lane().lane_boundary_size(); ++b)
+            if(!tmpLane.centerLanes.empty())
+                laneMessage.append(tmpLane);
+        }
+    }
+
+    // DRAW_LANE_BOUNDARIES
+    for (int i = 0; i < currentSensorData_.lane_boundary_size(); ++i)
+    {
+        const osi::DetectedLaneBoundary& dLaneB = currentSensorData_.lane_boundary(i);
+        if(dLaneB.existence_probability() == 1)
+        {
+            const osi::LaneBoundary& laneB = dLaneB.lane_boundary();
+            LaneStruct tmpLane;
+            tmpLane.id = dLaneB.tracking_id().value();
+
+            QVector<QVector3D> boundaryLines;
+
+            for (int c = 0; c < laneB.boundary_line_size(); ++c)
             {
-                const osi::LaneBoundary& laneBoundary = lane.lane().lane_boundary(b);
-                QVector<QVector3D> boundaryLines;
+                const osi::BoundaryPoint& boundaryLine = laneB.boundary_line(c);
+                const osi::Vector3d& position = boundaryLine.position();
 
-                for (int c = 0; c < laneBoundary.boundary_line_size(); ++c)
+                if(position.x() != 0 || position.y() != 0 || position.z() != 0)
                 {
-                    const osi::BoundaryPoint& boundaryLine = laneBoundary.boundary_line(c);
-                    const osi::Vector3d& position = boundaryLine.position();
-
-                    if(position.x() != 0 || position.y() != 0 || position.z() != 0)
-                    {
-                        boundaryLines.append(QVector3D(position.x(), 0, -position.y()));
-                    }
-                    else if(!boundaryLines.empty())
-                    {
-                        tmpLane.boundaryLanes.append(boundaryLines);
-                        boundaryLines.clear();
-                    }
+                    boundaryLines.append(QVector3D(position.y(), 0, position.x()));
                 }
-
-                if(!boundaryLines.empty())
+                else if(!boundaryLines.empty())
+                {
                     tmpLane.boundaryLanes.append(boundaryLines);
+                    boundaryLines.clear();
+                }
             }
 
-            laneMessage.append(tmpLane);
+            if(!boundaryLines.empty())
+                tmpLane.boundaryLanes.append(boundaryLines);
+
+            if(!tmpLane.boundaryLanes.empty())
+                laneMessage.append(tmpLane);
         }
     }
 }
+
 
 /*
  *
  * Parse a moving SensorData Object
  *
  */
+
 void
 OsiParser::ParseSensorDataMovingObject(Message& objectMessage,
                                        const osi::BaseMoving& baseObject,
@@ -399,7 +418,7 @@ OsiParser::ParseSensorDataMovingObject(Message& objectMessage,
     tmpMsg.id = Global::GetObjectTypeName(objectType) + idStr;
     tmpMsg.name = "ID: " + idStr;
     tmpMsg.type = objectType;
-    tmpMsg.isEgoVehicle = false;
+    tmpMsg.isHostVehicle = false;
     tmpMsg.orientation = orientation;
     tmpMsg.position = QVector3D(position.x(), 0, -position.y());
     tmpMsg.realPosition = QVector3D(position.x(), position.y(), position.z());
@@ -453,7 +472,7 @@ OsiParser::ParseSensorDataStationaryObject(Message& objectMessage,
     tmpMsg.id = Global::GetObjectTypeName(objectType) + idStr;
     tmpMsg.name = "ID: " + idStr;
     tmpMsg.type = objectType;
-    tmpMsg.isEgoVehicle = false;
+    tmpMsg.isHostVehicle = false;
     tmpMsg.orientation = orientation;
     tmpMsg.position = QVector3D(position.x(), 0, -position.y());
     tmpMsg.realPosition = QVector3D(position.x(), position.y(), position.z());
@@ -536,7 +555,7 @@ OsiParser::GetObjectTypeFromOsiVehicleType(const osi::Vehicle_Type vehicleType)
         case osi::Vehicle_Type_TYPE_TRUCK:
             objType = ObjectType::Truck;
             break;
-        case osi::Vehicle_Type_TYPE_MOTOR_BIKE:
+        case osi::Vehicle_Type_TYPE_MOTORBIKE:
             objType = ObjectType::MotorBike;
             break;
         case osi::Vehicle_Type_TYPE_BICYCLE:

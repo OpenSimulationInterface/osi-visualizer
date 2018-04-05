@@ -53,7 +53,7 @@ struct MessageStruct
     QString id;
     QString name;
     ObjectType type;
-    bool isEgoVehicle;
+    bool isHostVehicle;
     float orientation;
     QVector3D position;
     QVector3D realPosition;

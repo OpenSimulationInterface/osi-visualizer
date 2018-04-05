@@ -254,8 +254,8 @@ OsiReader::SliderValueChanged(int newValue)
 uint64_t
 OsiReader::GetTimeStampInNanoSecond(osi::SensorData& osiSD)
 {
-    uint64_t second = osiSD.mutable_ground_truth()->mutable_global_ground_truth()->timestamp().seconds();
-    int32_t nano = osiSD.mutable_ground_truth()->mutable_global_ground_truth()->timestamp().nanos();
+    uint64_t second = osiSD.global_ground_truth().timestamp().seconds();
+    int32_t nano = osiSD.global_ground_truth().timestamp().nanos();
     uint64_t timeStamp = second * 1000000000 + nano;
 
     return timeStamp;

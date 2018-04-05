@@ -538,7 +538,7 @@ GLWidget::MessageParsed(const Message& message,
             currentObject->alreadyInObjectTree_ = true;
         }
 
-        if (currentDataType_ != DataType::SensorData && isFirstMsgReceived_ && msg.isEgoVehicle)
+        if (currentDataType_ != DataType::SensorData && isFirstMsgReceived_ && msg.isHostVehicle)
         {
             isFirstMsgReceived_ = false;
             selectedObject_ = currentObject;

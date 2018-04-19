@@ -450,7 +450,7 @@ GLWidget::MessageParsed(const Message& message,
                     }
                     else
                     {
-                        osi::Dimension3d dimension = msg.dimension;
+                        osi3::Dimension3d dimension = msg.dimension;
                         object->vertices_.clear();
                         object->vertices_ << QVector3D(-dimension.width()/2, 0, dimension.length()/2)
                                           << QVector3D(dimension.width()/2, 0, dimension.length()/2)
@@ -538,7 +538,7 @@ GLWidget::MessageParsed(const Message& message,
             currentObject->alreadyInObjectTree_ = true;
         }
 
-        if (currentDataType_ != DataType::SensorData && isFirstMsgReceived_ && msg.isHostVehicle)
+        if (currentDataType_ != DataType::SensorData && isFirstMsgReceived_)
         {
             isFirstMsgReceived_ = false;
             selectedObject_ = currentObject;

@@ -126,7 +126,7 @@ TCPReceiver::ReceiveLoop()
             if (message.size() > 0)
             {
                 msgReceived = true;
-                osi::SensorData sensorData;
+                osi3::SensorData sensorData;
 
                 if(sensorData.ParseFromArray(message.data(),message.size()))
                 {

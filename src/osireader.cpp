@@ -234,7 +234,7 @@ OsiReader::SliderValueChanged(int newValue)
                 continue;
             }
 
-            osi::SensorData osiSD;
+            osi3::SensorData osiSD;
             if(osiSD.ParseFromString(str_line))
             {
                 uint64_t curStamp = GetTimeStampInNanoSecond(osiSD);
@@ -252,10 +252,10 @@ OsiReader::SliderValueChanged(int newValue)
 }
 
 uint64_t
-OsiReader::GetTimeStampInNanoSecond(osi::SensorData& osiSD)
+OsiReader::GetTimeStampInNanoSecond(osi3::SensorData& osiSD)
 {
-    uint64_t second = osiSD.global_ground_truth().timestamp().seconds();
-    int32_t nano = osiSD.global_ground_truth().timestamp().nanos();
+    uint64_t second = osiSD.timestamp().seconds();
+    int32_t nano = osiSD.timestamp().nanos();
     uint64_t timeStamp = second * 1000000000 + nano;
 
     return timeStamp;
@@ -318,7 +318,7 @@ OsiReader::CreateHeader(QString& errorMsg)
             continue;
         }
 
-        osi::SensorData osiSD;
+        osi3::SensorData osiSD;
         if(osiSD.ParseFromString(str_line))
         {
             if(isFirstMsg)
@@ -412,7 +412,7 @@ OsiReader::SendMessageLoop()
                     continue;
                 }
 
-                osi::SensorData osiSD;
+                osi3::SensorData osiSD;
                 if(osiSD.ParseFromString(str_line))
                 {
                     uint64_t curStamp = GetTimeStampInNanoSecond(osiSD);
@@ -718,14 +718,9 @@ OsiReader::initializeFMU()
         return false;
 }
 
-#include <unistd.h>
-static int counter = 0;
 void
 OsiReader::set_fmi_sensor_data_out()
 {
-//    currentBuffer_ = std::to_string(counter++)+'\n';
-//    usleep(500000);
-    qDebug() << "FMU send message: " << counter++;
     encode_pointer_to_integer(currentBuffer_.data(),
                               integerVars_[FMI_INTEGER_SENSORDATA_IN_BASEHI_IDX],
                               integerVars_[FMI_INTEGER_SENSORDATA_IN_BASELO_IDX]);

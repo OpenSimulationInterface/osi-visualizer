@@ -153,7 +153,7 @@ FMUReceiver::ReceiveLoop()
             time_t timeC = time(NULL);
             fmiStatus_ = fmi2_import_do_step(fmu_, (fmi2_real_t)timeC, hStep_, newStep);
 
-            osi::SensorData sd;
+            osi3::SensorData sd;
             if (get_fmi_sensor_data_in(sd))
             {
                 qDebug() << "FMU SensorData Receive data";
@@ -286,10 +286,9 @@ FMUReceiver::initializeFMU()
 }
 
 bool
-FMUReceiver::get_fmi_sensor_data_in(osi::SensorData& data)
+FMUReceiver::get_fmi_sensor_data_in(osi3::SensorData& data)
 {
     fmiStatus_ = fmi2_import_get_integer(fmu_, vr_, FMI_INTEGER_VARS, integerVars_);
-//    qDebug() << "rx buffer size: " << integerVars_[FMI_INTEGER_SENSORDATA_OUT_SIZE_IDX];
     if (integerVars_[FMI_INTEGER_SENSORDATA_OUT_SIZE_IDX] > 0)
     {
         void* buffer = decode_integer_to_pointer(integerVars_[FMI_INTEGER_SENSORDATA_OUT_BASEHI_IDX],

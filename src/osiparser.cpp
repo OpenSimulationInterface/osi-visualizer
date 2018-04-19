@@ -14,10 +14,7 @@
  */
 
 OsiParser::OsiParser(const int osiMsgSaveThreshold)
-    : currentGroundTruth_()
-    , currentSensorData_()
-    , currentDataType_()
-    , isFirstMessage_(true)
+    : isFirstMessage_(true)
     , startSaveOSIMsg_(false)
     , osiMsgString_("")
     , osiMsgNumber_(0)
@@ -37,12 +34,9 @@ OsiParser::CancelSaveOSIMessage()
 }
 
 void
-OsiParser::ParseReceivedMessage(const osi::SensorData& sensorData,
+OsiParser::ParseReceivedMessage(const osi3::SensorData& sensorData,
                                 const DataType datatype)
 {
-    currentSensorData_ = sensorData;
-    currentDataType_ = datatype;
-
     if (isFirstMessage_)
     {
         isFirstMessage_ = false;
@@ -52,7 +46,7 @@ OsiParser::ParseReceivedMessage(const osi::SensorData& sensorData,
     {
         ++osiMsgNumber_;
 
-        osiMsgString_ += currentSensorData_.SerializeAsString();
+        osiMsgString_ += sensorData.SerializeAsString();
         osiMsgString_ += "$$__$$";
     }
     else if(osiMsgNumber_ >= osiMsgSaveThreshold_)
@@ -63,14 +57,14 @@ OsiParser::ParseReceivedMessage(const osi::SensorData& sensorData,
     Message objectMessage;
     LaneMessage laneMessage;
 
-    if (currentDataType_ == DataType::Groundtruth)
+    if (datatype == DataType::Groundtruth)
     {
-        currentGroundTruth_ = currentSensorData_.global_ground_truth();
-        ParseGroundtruth(objectMessage, laneMessage);
+        const osi3::GroundTruth& groundTruth = sensorData.sensor_view(0).global_ground_truth();
+        ParseGroundtruth(groundTruth, objectMessage, laneMessage);
     }
-    else if (currentDataType_ == DataType::SensorData)
+    else if (datatype == DataType::SensorData)
     {
-        ParseSensorData(objectMessage, laneMessage);
+        ParseSensorData(sensorData, objectMessage, laneMessage);
     }
 
     emit MessageParsed(objectMessage, laneMessage);
@@ -78,85 +72,81 @@ OsiParser::ParseReceivedMessage(const osi::SensorData& sensorData,
 
 //Parse Ground Truth Data
 void
-OsiParser::ParseGroundtruth(Message& objectMessage,
+OsiParser::ParseGroundtruth(const osi3::GroundTruth& groundTruth,
+                            Message& objectMessage,
                             LaneMessage& laneMessage)
 {
 
-    for (int i = 0; i < currentGroundTruth_.moving_object_size(); ++i)
+    for (int i = 0; i < groundTruth.moving_object_size(); ++i)
     {
-        osi::MovingObject object = currentGroundTruth_.moving_object(i);
+        const osi3::MovingObject& object = groundTruth.moving_object(i);
         ObjectType objectType = GetObjectTypeFromOsiObjectType(object.type());
         QString idStr = QString::number(object.id().value());
 
         ParseGroundtruthMovingObject(objectMessage,
                                      object.base(),
                                      objectType,
-                                     idStr,
-                                     false);
+                                     idStr);
     }
 
-    for (int i = 0; i < currentGroundTruth_.stationary_object_size(); ++i)
+    for (int i = 0; i < groundTruth.stationary_object_size(); ++i)
     {
-        osi::StationaryObject object = currentGroundTruth_.stationary_object(i);
-        ObjectType objectType = GetObjectTypeFromOsiObjectType(object.type());
+        const osi3::StationaryObject& object = groundTruth.stationary_object(i);
+        ObjectType objectType = GetObjectTypeFromOsiObjectType(object.classification().type());
         QString idStr = QString::number(object.id().value());
 
         ParseGroundtruthStationaryObject(objectMessage,
                                          object.base(),
                                          objectType,
-                                         idStr,
-                                         false);
+                                         idStr);
     }
 
-    for (int i = 0; i < currentGroundTruth_.vehicle_size(); ++i)
+    for (int i = 0; i < groundTruth.moving_object_size(); ++i)
     {
-        osi::Vehicle vehicle = currentGroundTruth_.vehicle(i);
-        ObjectType objectType = GetObjectTypeFromOsiVehicleType(vehicle.type());
-        QString idStr = QString::number(vehicle.id().value());
+        const osi3::MovingObject& mvObj = groundTruth.moving_object(i);
+        ObjectType objectType = GetObjectTypeFromOsiObjectType(mvObj.type());
+        QString idStr = QString::number(mvObj.id().value());
 
         ParseGroundtruthMovingObject(objectMessage,
-                                     vehicle.base(),
+                                     mvObj.base(),
                                      objectType,
-                                     idStr,
-                                     vehicle.host_vehicle());
+                                     idStr);
     }
 
-    for (int i = 0; i < currentGroundTruth_.traffic_sign_size(); ++i)
+    for (int i = 0; i < groundTruth.traffic_sign_size(); ++i)
     {
-        osi::TrafficSign sign = currentGroundTruth_.traffic_sign(i);
+        const osi3::TrafficSign& sign = groundTruth.traffic_sign(i);
         QString idStr = QString::number(sign.id().value());
 
         ParseGroundtruthStationaryObject(objectMessage,
-                                         sign.base(),
+                                         sign.main_sign().base(),
                                          ObjectType::TrafficSign,
-                                         idStr,
-                                         false);
+                                         idStr);
     }
 
 
-    for (int i = 0; i < currentGroundTruth_.traffic_light_size(); ++i)
+    for (int i = 0; i < groundTruth.traffic_light_size(); ++i)
     {
-        osi::TrafficLight light = currentGroundTruth_.traffic_light(i);
+        const osi3::TrafficLight& light = groundTruth.traffic_light(i);
         QString idStr = QString::number(light.id().value());
 
         ParseGroundtruthStationaryObject(objectMessage,
                                          light.base(),
                                          ObjectType::TrafficLight,
-                                         idStr,
-                                         false);
+                                         idStr);
     }
 
     // DRAW_CENTER_LINES
-    for (int i = 0; i < currentGroundTruth_.lane_size(); ++i)
+    for (int i = 0; i < groundTruth.lane_size(); ++i)
     {
-        const osi::Lane& lane = currentGroundTruth_.lane(i);
+        const osi3::Lane& lane = groundTruth.lane(i);
         LaneStruct tmpLane;
         tmpLane.id = lane.id().value();
 
         QVector<QVector3D> centerLines;
-        for (int a = 0; a < lane.center_line_size(); ++a)
+        for (int a = 0; a < lane.classification().centerline_size(); ++a)
         {
-            const osi::Vector3d& centerLine = lane.center_line(a);
+            const osi3::Vector3d& centerLine = lane.classification().centerline(a);
             centerLines.append(QVector3D(centerLine.y(), 0, centerLine.x()));
         }
 
@@ -166,17 +156,17 @@ OsiParser::ParseGroundtruth(Message& objectMessage,
     }
 
     // DRAW_LANE_BOUNDARIES
-    for (int b = 0; b < currentGroundTruth_.lane_boundary_size(); ++b)
+    for (int b = 0; b < groundTruth.lane_boundary_size(); ++b)
     {
-        const osi::LaneBoundary& laneBoundary = currentGroundTruth_.lane_boundary(b);
+        const osi3::LaneBoundary& laneBoundary = groundTruth.lane_boundary(b);
         LaneStruct tmpLane;
         tmpLane.id = laneBoundary.id().value();
 
         QVector<QVector3D> boundaryLines;
         for (int c = 0; c < laneBoundary.boundary_line_size(); ++c)
         {
-            const osi::BoundaryPoint& boundaryLine = laneBoundary.boundary_line(c);
-            const osi::Vector3d& position = boundaryLine.position();
+            const osi3::LaneBoundary_BoundaryPoint& boundaryPoint = laneBoundary.boundary_line(c);
+            const osi3::Vector3d& position = boundaryPoint.position();
             boundaryLines.append(QVector3D(position.y(), 0, position.x()));
         }
 
@@ -190,21 +180,20 @@ OsiParser::ParseGroundtruth(Message& objectMessage,
 // Parse a moving ground truth object
 void
 OsiParser::ParseGroundtruthMovingObject(Message& objectMessage,
-                                        const osi::BaseMoving& baseObject,
+                                        const osi3::BaseMoving& baseObject,
                                         const ObjectType objectType,
-                                        const QString& idStr,
-                                        const bool isHostVehicle)
+                                        const QString& idStr)
 {
     if (objectType == ObjectType::None)
     {
         return;
     }
 
-    osi::Vector3d position = baseObject.position();
-    osi::Vector3d velocity = baseObject.velocity();
-    osi::Vector3d acceleration = baseObject.acceleration();
+    osi3::Vector3d position = baseObject.position();
+    osi3::Vector3d velocity = baseObject.velocity();
+    osi3::Vector3d acceleration = baseObject.acceleration();
     float orientation = baseObject.orientation().yaw();
-    osi::Dimension3d dimension = baseObject.dimension();
+    osi3::Dimension3d dimension = baseObject.dimension();
 
     if (dimension.width() == 0 && dimension.length() == 0)
     {
@@ -216,7 +205,6 @@ OsiParser::ParseGroundtruthMovingObject(Message& objectMessage,
     tmpMsg.id = Global::GetObjectTypeName(objectType) + idStr;
     tmpMsg.name = "ID: " + idStr;
     tmpMsg.type = objectType;
-    tmpMsg.isHostVehicle = isHostVehicle;
     tmpMsg.orientation = orientation+M_PI_2;
     tmpMsg.position = QVector3D(position.y(), 0, position.x());
     tmpMsg.realPosition = QVector3D(position.x(), position.y(), position.z());
@@ -231,26 +219,25 @@ OsiParser::ParseGroundtruthMovingObject(Message& objectMessage,
 // Parse a stationary ground truth object
 void
 OsiParser::ParseGroundtruthStationaryObject(Message& objectMessage,
-                                            const osi::BaseStationary& baseObject,
+                                            const osi3::BaseStationary& baseObject,
                                             const ObjectType objectType,
-                                            const QString& idStr,
-                                            const bool isHostVehicle)
+                                            const QString& idStr)
 {
     if (objectType == ObjectType::None)
     {
         return;
     }
 
-    osi::Vector3d tmp;
+    osi3::Vector3d tmp;
     tmp.set_x(0.0);
     tmp.set_y(0.0);
     tmp.set_z(0.0);
 
-    osi::Vector3d position = baseObject.position();
-    osi::Vector3d velocity = tmp;
-    osi::Vector3d acceleration = tmp;
+    osi3::Vector3d position = baseObject.position();
+    osi3::Vector3d velocity = tmp;
+    osi3::Vector3d acceleration = tmp;
     float orientation = baseObject.orientation().yaw();
-    osi::Dimension3d dimension = baseObject.dimension();
+    osi3::Dimension3d dimension = baseObject.dimension();
 
     if (dimension.width() == 0 && dimension.length() == 0)
     {
@@ -262,7 +249,6 @@ OsiParser::ParseGroundtruthStationaryObject(Message& objectMessage,
     tmpMsg.id = Global::GetObjectTypeName(objectType) + idStr;
     tmpMsg.name = "ID: " + idStr;
     tmpMsg.type = objectType;
-    tmpMsg.isHostVehicle = isHostVehicle;
     tmpMsg.orientation = orientation+M_PI_2;
     tmpMsg.position = QVector3D(position.y(), 0, position.x());
     tmpMsg.realPosition = QVector3D(position.x(), position.y(), position.z());
@@ -276,131 +262,120 @@ OsiParser::ParseGroundtruthStationaryObject(Message& objectMessage,
 
 // Parse SensorData
 void
-OsiParser::ParseSensorData(Message& objectMessage,
+OsiParser::ParseSensorData(const osi3::SensorData &sensorData,
+                           Message& objectMessage,
                            LaneMessage& laneMessage)
 {
-    for (int i = 0; i < currentSensorData_.object_size(); ++i)
+    for (int i = 0; i < sensorData.moving_object_size(); ++i)
     {
-        osi::DetectedObject sensorDataObject = currentSensorData_.object(i);
-        if(sensorDataObject.model_internal_object().is_seen())
+        const osi3::DetectedMovingObject& dectObj = sensorData.moving_object(i);
+        double highestProbability = -1;
+        int highestIndex = 0;
+        for(int j = 0; j < dectObj.candidate().size(); ++j)
         {
-
-            ObjectType objectType = GetObjectTypeFromHighestProbability(sensorDataObject.class_probability());
-
-            if (objectType == ObjectType::None)
+            const osi3::DetectedMovingObject_CandidateMovingObject candi = dectObj.candidate(j);
+            if(candi.probability() > highestProbability)
             {
-                continue;
+                highestProbability = candi.probability();
+                highestIndex = j;
             }
-
-            QString idStr = QString::number(sensorDataObject.ground_truth_id(0).value());
-
-            ParseSensorDataMovingObject(objectMessage, sensorDataObject.object(), objectType, idStr);
         }
+
+        ObjectType objectType = GetObjectTypeFromOsiObjectType(dectObj.candidate(highestIndex).vehicle_classification().type());
+        QString idStr = QString::number(dectObj.header().ground_truth_id(highestIndex).value());
+        ParseSensorDataMovingObject(objectMessage, dectObj.base(), objectType, idStr);
     }
 
-    for (int i = 0; i < currentSensorData_.traffic_sign_size(); ++i)
+    for (int i = 0; i < sensorData.traffic_sign_size(); ++i)
     {
-        osi::DetectedTrafficSign sensorDataSign = currentSensorData_.traffic_sign(i);
-        osi::TrafficSign signToDisplay;
-
-        double highestProbCandidate = -1.0f;
-        int signToDisplayID;
-
-        for(int j = 0; j < sensorDataSign.candidate_sign_size(); ++j)
-        {
-
-            if(sensorDataSign.candidate_sign(j).candidate_probability() > highestProbCandidate)
-            {
-                signToDisplayID = j;
-            }
-        }
-
-        signToDisplay = sensorDataSign.mutable_candidate_sign(signToDisplayID)->sign();
-
-        QString idStr = QString::number(signToDisplay.id().value());
-
-        ParseSensorDataStationaryObject(objectMessage, signToDisplay.base(), ObjectType::TrafficSign, idStr);
-
+        const osi3::DetectedTrafficSign_DetectedMainSign& dectMS = sensorData.traffic_sign(i).main_sign();
+        QString idStr = QString::number(sensorData.traffic_sign(i).header().tracking_id().value());
+        ParseSensorDataStationaryObject(objectMessage, dectMS.base(), ObjectType::TrafficSign, idStr);
     }
 
     // DRAW_CENTER_LINES
-    for (int i = 0; i < currentSensorData_.lane_size(); ++i)
+    for (int i = 0; i < sensorData.lane_size(); ++i)
     {
-        const osi::DetectedLane& lane = currentSensorData_.lane(i);
-        if(lane.existence_probability() == 1)
+        const osi3::DetectedLane& detectL = sensorData.lane(i);
+
+        int highestProbability = -1;
+        int highestProbabilityIndex = -1;
+        for(int i = 0; i < detectL.candidate_size(); ++i)
         {
-            LaneStruct tmpLane;
-            tmpLane.id = lane.lane().id().value();
-
-            QVector<QVector3D> centerLines;
-            for (int a = 0; a < lane.lane().center_line_size(); ++a)
+            if(highestProbability < detectL.candidate(i).probability())
             {
-                const osi::Vector3d& centerLine = lane.lane().center_line(a);
-                if(centerLine.x() != 0 || centerLine.y() != 0 || centerLine.z() != 0)
-                {
-                    centerLines.append(QVector3D(centerLine.x(), 0, -centerLine.y()));
-                }
-                else if(!centerLines.empty())
-                {
-                    tmpLane.centerLanes.append(centerLines);
-                    centerLines.clear();
-                }
+                highestProbability = detectL.candidate(i).probability();
+                highestProbabilityIndex = i;
             }
-            if(!centerLines.empty())
-                tmpLane.centerLanes.append(centerLines);
-
-            if(!tmpLane.centerLanes.empty())
-                laneMessage.append(tmpLane);
         }
+
+        LaneStruct tmpLane;
+        tmpLane.id = detectL.header().tracking_id().value();
+
+        QVector<QVector3D> centerLines;
+        const osi3::Lane_Classification& laneC = detectL.candidate(highestProbabilityIndex).classification();
+
+        for(int c = 0; c < laneC.centerline_size(); ++c)
+        {
+            const osi3::Vector3d& centerLine = laneC.centerline(c);
+            if(centerLine.x() != 0 || centerLine.y() != 0 || centerLine.z() != 0)
+            {
+                centerLines.append(QVector3D(centerLine.x(), 0, -centerLine.y()));
+            }
+            else if(!centerLines.empty())
+            {
+                tmpLane.centerLanes.append(centerLines);
+                centerLines.clear();
+            }
+        }
+        if(!centerLines.empty())
+            tmpLane.centerLanes.append(centerLines);
+
+        if(!tmpLane.centerLanes.empty())
+            laneMessage.append(tmpLane);
     }
 
     // DRAW_LANE_BOUNDARIES
-    for (int i = 0; i < currentSensorData_.lane_boundary_size(); ++i)
+    for (int i = 0; i < sensorData.lane_boundary_size(); ++i)
     {
-        const osi::DetectedLaneBoundary& dLaneB = currentSensorData_.lane_boundary(i);
-        if(dLaneB.existence_probability() == 1)
+        const osi3::DetectedLaneBoundary& dLaneB = sensorData.lane_boundary(i);
+
+        LaneStruct tmpLane;
+        tmpLane.id = dLaneB.header().tracking_id().value();
+
+        QVector<QVector3D> boundaryLines;
+
+        for(int b = 0; b < dLaneB.boundary_line_size(); ++b)
         {
-            const osi::LaneBoundary& laneB = dLaneB.lane_boundary();
-            LaneStruct tmpLane;
-            tmpLane.id = dLaneB.tracking_id().value();
+            const osi3::Vector3d& position = dLaneB.boundary_line(b).position();
 
-            QVector<QVector3D> boundaryLines;
-
-            for (int c = 0; c < laneB.boundary_line_size(); ++c)
+            if(position.x() != 0 || position.y() != 0 || position.z() != 0)
             {
-                const osi::BoundaryPoint& boundaryLine = laneB.boundary_line(c);
-                const osi::Vector3d& position = boundaryLine.position();
-
-                if(position.x() != 0 || position.y() != 0 || position.z() != 0)
-                {
-                    boundaryLines.append(QVector3D(position.y(), 0, position.x()));
-                }
-                else if(!boundaryLines.empty())
-                {
-                    tmpLane.boundaryLanes.append(boundaryLines);
-                    boundaryLines.clear();
-                }
+                boundaryLines.append(QVector3D(position.y(), 0, position.x()));
             }
-
-            if(!boundaryLines.empty())
+            else if(!boundaryLines.empty())
+            {
                 tmpLane.boundaryLanes.append(boundaryLines);
-
-            if(!tmpLane.boundaryLanes.empty())
-                laneMessage.append(tmpLane);
+                boundaryLines.clear();
+            }
         }
+
+        if(!boundaryLines.empty())
+            tmpLane.boundaryLanes.append(boundaryLines);
+
+        if(!tmpLane.boundaryLanes.empty())
+            laneMessage.append(tmpLane);
     }
 }
-
 
 /*
  *
  * Parse a moving SensorData Object
  *
  */
-
 void
 OsiParser::ParseSensorDataMovingObject(Message& objectMessage,
-                                       const osi::BaseMoving& baseObject,
+                                       const osi3::BaseMoving& baseObject,
                                        const ObjectType objectType,
                                        const QString& idStr)
 {
@@ -409,33 +384,32 @@ OsiParser::ParseSensorDataMovingObject(Message& objectMessage,
         return;
     }
 
-    osi::Vector3d position = baseObject.position();
-    osi::Vector3d velocity = baseObject.velocity();
-    osi::Vector3d acceleration = baseObject.acceleration();
+    osi3::Vector3d position = baseObject.position();
+    osi3::Vector3d velocity = baseObject.velocity();
+    osi3::Vector3d acceleration = baseObject.acceleration();
     float orientation = baseObject.orientation().yaw();
 
     MessageStruct tmpMsg;
     tmpMsg.id = Global::GetObjectTypeName(objectType) + idStr;
     tmpMsg.name = "ID: " + idStr;
     tmpMsg.type = objectType;
-    tmpMsg.isHostVehicle = false;
     tmpMsg.orientation = orientation;
     tmpMsg.position = QVector3D(position.x(), 0, -position.y());
     tmpMsg.realPosition = QVector3D(position.x(), position.y(), position.z());
     tmpMsg.velocitie = QVector3D(velocity.x(), velocity.y(), velocity.z());
     tmpMsg.acceleration = QVector3D(acceleration.x(), acceleration.y(), acceleration.z());
-    
+
     if(baseObject.base_polygon_size() == 4)
     {
         for(int i = 0; i < 4; ++i)
         {
-            const osi::Vector2d& vertice = baseObject.base_polygon(i);
+            const osi3::Vector2d& vertice = baseObject.base_polygon(i);
             tmpMsg.basePoly.push_back(QVector3D(vertice.x() - position.x(), 0, -vertice.y()+position.y()));
         }
     }
     else
     {
-        osi::Dimension3d dimension = baseObject.dimension();
+        osi3::Dimension3d dimension = baseObject.dimension();
         if (dimension.width() == 0 && dimension.length() == 0)
         {
             dimension.set_width(1.0f);
@@ -449,7 +423,7 @@ OsiParser::ParseSensorDataMovingObject(Message& objectMessage,
 
 void
 OsiParser::ParseSensorDataStationaryObject(Message& objectMessage,
-                                           const osi::BaseStationary& baseObject,
+                                           const osi3::BaseStationary& baseObject,
                                            const ObjectType objectType,
                                            const QString& idStr)
 {
@@ -458,38 +432,37 @@ OsiParser::ParseSensorDataStationaryObject(Message& objectMessage,
         return;
     }
 
-    osi::Vector3d tmp;
+    osi3::Vector3d tmp;
     tmp.set_x(0.0);
     tmp.set_y(0.0);
     tmp.set_z(0.0);
 
-    osi::Vector3d position = baseObject.position();
-    osi::Vector3d velocity = tmp;
-    osi::Vector3d acceleration = tmp;
+    osi3::Vector3d position = baseObject.position();
+    osi3::Vector3d velocity = tmp;
+    osi3::Vector3d acceleration = tmp;
     float orientation = baseObject.orientation().yaw();
 
     MessageStruct tmpMsg;
     tmpMsg.id = Global::GetObjectTypeName(objectType) + idStr;
     tmpMsg.name = "ID: " + idStr;
     tmpMsg.type = objectType;
-    tmpMsg.isHostVehicle = false;
     tmpMsg.orientation = orientation;
     tmpMsg.position = QVector3D(position.x(), 0, -position.y());
     tmpMsg.realPosition = QVector3D(position.x(), position.y(), position.z());
     tmpMsg.velocitie = QVector3D(velocity.x(), velocity.y(), velocity.z());
     tmpMsg.acceleration = QVector3D(acceleration.x(), acceleration.y(), acceleration.z());
-    
+
     if(baseObject.base_polygon_size() == 4)
     {
         for(int i = 0; i < 4; ++i)
         {
-            const osi::Vector2d& vertice = baseObject.base_polygon(i);
+            const osi3::Vector2d& vertice = baseObject.base_polygon(i);
             tmpMsg.basePoly.push_back(QVector3D(vertice.x(), 0, -vertice.y()));
         }
     }
     else
     {
-        osi::Dimension3d dimension = baseObject.dimension();
+        osi3::Dimension3d dimension = baseObject.dimension();
         if (dimension.width() == 0 && dimension.length() == 0)
         {
             dimension.set_width(1.0f);
@@ -497,7 +470,7 @@ OsiParser::ParseSensorDataStationaryObject(Message& objectMessage,
         }
         tmpMsg.dimension = dimension;
     }
-    
+
     objectMessage.append(tmpMsg);
 }
 
@@ -539,29 +512,34 @@ OsiParser::ExportOsiMessage()
 
 // Convert object types
 ObjectType
-OsiParser::GetObjectTypeFromOsiVehicleType(const osi::Vehicle_Type vehicleType)
+OsiParser::GetObjectTypeFromOsiObjectType(const osi3::MovingObject_VehicleClassification_Type& vehicleType)
 {
     ObjectType objType = ObjectType::None;
     switch (vehicleType) {
-        case osi::Vehicle_Type_TYPE_UNKNOWN:
+        case osi3::MovingObject_VehicleClassification_Type_TYPE_UNKNOWN:
             objType = ObjectType::UnknownObject;
             break;
-        case osi::Vehicle_Type_TYPE_OTHER:
+        case osi3::MovingObject_VehicleClassification_Type_TYPE_OTHER:
             objType = ObjectType::OtherObject;
             break;
-        case osi::Vehicle_Type_TYPE_CAR:
+        case osi3::MovingObject_VehicleClassification_Type_TYPE_SMALL_CAR:
+        case osi3::MovingObject_VehicleClassification_Type_TYPE_COMPACT_CAR:
+        case osi3::MovingObject_VehicleClassification_Type_TYPE_MEDIUM_CAR:
+        case osi3::MovingObject_VehicleClassification_Type_TYPE_LUXURY_CAR:
             objType = ObjectType::Car;
             break;
-        case osi::Vehicle_Type_TYPE_TRUCK:
+        case osi3::MovingObject_VehicleClassification_Type_TYPE_DELIVERY_VAN:
+        case osi3::MovingObject_VehicleClassification_Type_TYPE_HEAVY_TRUCK:
             objType = ObjectType::Truck;
             break;
-        case osi::Vehicle_Type_TYPE_MOTORBIKE:
+        case osi3::MovingObject_VehicleClassification_Type_TYPE_MOTORBIKE:
             objType = ObjectType::MotorBike;
             break;
-        case osi::Vehicle_Type_TYPE_BICYCLE:
+        case osi3::MovingObject_VehicleClassification_Type_TYPE_BICYCLE:
             objType = ObjectType::Bicycle;
             break;
-        case osi::Vehicle_Type_TYPE_TRAILER:
+        case osi3::MovingObject_VehicleClassification_Type_TYPE_SEMITRAILER:
+        case osi3::MovingObject_VehicleClassification_Type_TYPE_TRAILER:
             objType = ObjectType::Trailer;
             break;
         default:
@@ -572,20 +550,23 @@ OsiParser::GetObjectTypeFromOsiVehicleType(const osi::Vehicle_Type vehicleType)
 }
 
 ObjectType
-OsiParser::GetObjectTypeFromOsiObjectType(const osi::MovingObject_Type objectType)
+OsiParser::GetObjectTypeFromOsiObjectType(const osi3::MovingObject_Type& objectType)
 {
     ObjectType objType = ObjectType::None;
     switch (objectType) {
-        case osi::MovingObject_Type_TYPE_UNKNOWN:
+        case osi3::MovingObject_Type_TYPE_UNKNOWN:
             objType = ObjectType::UnknownObject;
             break;
-        case osi::MovingObject_Type_TYPE_OTHER:
+        case osi3::MovingObject_Type_TYPE_OTHER:
             objType = ObjectType::OtherObject;
             break;
-        case osi::MovingObject_Type_TYPE_PEDESTRIAN:
+        case osi3::MovingObject_Type_TYPE_VEHICLE:
             objType = ObjectType::Pedestrian;
             break;
-        case osi::MovingObject_Type_TYPE_ANIMAL:
+        case osi3::MovingObject_Type_TYPE_PEDESTRIAN:
+            objType = ObjectType::Pedestrian;
+            break;
+        case osi3::MovingObject_Type_TYPE_ANIMAL:
             objType = ObjectType::Animal;
             break;
         default:
@@ -596,29 +577,29 @@ OsiParser::GetObjectTypeFromOsiObjectType(const osi::MovingObject_Type objectTyp
 }
 
 ObjectType
-OsiParser::GetObjectTypeFromOsiObjectType(const osi::StationaryObject_Type objectType)
+OsiParser::GetObjectTypeFromOsiObjectType(const osi3::StationaryObject_Classification_Type& objectType)
 {
     ObjectType objType = ObjectType::None;
     switch (objectType) {
-        case osi::StationaryObject_Type_TYPE_UNKNOWN:
+        case osi3::StationaryObject_Classification_Type_TYPE_UNKNOWN:
             objType = ObjectType::UnknownObject;
             break;
-        case osi::StationaryObject_Type_TYPE_OTHER:
+        case osi3::StationaryObject_Classification_Type_TYPE_OTHER:
             objType = ObjectType::OtherObject;
             break;
-        case osi::StationaryObject_Type_TYPE_BRIDGE:
+        case osi3::StationaryObject_Classification_Type_TYPE_BRIDGE:
             objType = ObjectType::Bridge;
             break;
-        case osi::StationaryObject_Type_TYPE_BUILDING:
+        case osi3::StationaryObject_Classification_Type_TYPE_BUILDING:
             objType = ObjectType::Building;
             break;
-        case osi::StationaryObject_Type_TYPE_PYLON:
+        case osi3::StationaryObject_Classification_Type_TYPE_PYLON:
             objType = ObjectType::Pylon;
             break;
-        case osi::StationaryObject_Type_TYPE_REFLECTOR_POST:
+        case osi3::StationaryObject_Classification_Type_TYPE_REFLECTIVE_STRUCTURE:
             objType = ObjectType::ReflectorPost;
             break;
-        case osi::StationaryObject_Type_TYPE_DELINEATOR:
+        case osi3::StationaryObject_Classification_Type_TYPE_DELINEATOR:
             objType = ObjectType::Delineator;
             break;
         default:
@@ -629,60 +610,17 @@ OsiParser::GetObjectTypeFromOsiObjectType(const osi::StationaryObject_Type objec
 }
 
 ObjectType
-OsiParser::GetObjectTypeFromOsiObjectType(const osi::TrafficSign_Type objectType)
+OsiParser::GetObjectTypeFromOsiObjectType(const osi3::TrafficSign_MainSign_Classification_Type& objectType)
 {
     return ObjectType::TrafficSign;
 }
 
 
 ObjectType
-OsiParser::GetObjectTypeFromOsiObjectType(const osi::TrafficLight_Type objectType)
+OsiParser::GetObjectTypeFromOsiObjectType(const osi3::TrafficLight_Classification_Mode& objectType)
 {
     return ObjectType::TrafficLight;
 }
 
-ObjectType
-OsiParser::GetObjectTypeFromHighestProbability(const osi::DetectedObject_ClassProbability& classProbability)
-{
-    ObjectType objectType = ObjectType::UnknownObject;
-    float highestProbability = -1;
 
-    if (classProbability.prob_bicycle() > highestProbability)
-    {
-        objectType = ObjectType::Bicycle;
-        highestProbability = classProbability.prob_bicycle();
-    }
-    if (classProbability.prob_car() > highestProbability)
-    {
-        objectType = ObjectType::Car;
-        highestProbability = classProbability.prob_car();
-    }
-    if (classProbability.prob_motorbike() > highestProbability)
-    {
-        objectType = ObjectType::MotorBike;
-        highestProbability = classProbability.prob_motorbike();
-    }
-    if (classProbability.prob_pedestrian() > highestProbability)
-    {
-        objectType = ObjectType::Pedestrian;
-        highestProbability = classProbability.prob_pedestrian();
-    }
-    if (classProbability.prob_stationary() > highestProbability)
-    {
-        objectType = ObjectType::Building;
-        highestProbability = classProbability.prob_stationary();
-    }
-    if (classProbability.prob_truck() > highestProbability)
-    {
-        objectType = ObjectType::Truck;
-        highestProbability = classProbability.prob_truck();
-    }
-    if (classProbability.prob_unknown() > highestProbability)
-    {
-        objectType = ObjectType::UnknownObject;
-        highestProbability = classProbability.prob_unknown();
-    }
-
-    return objectType;
-}
 

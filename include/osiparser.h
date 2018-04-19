@@ -33,50 +33,45 @@ class OsiParser : public QObject
 
     public slots:
         void ExportOsiMessage();
-        void ParseReceivedMessage(const osi::SensorData& SensorData,
+        void ParseReceivedMessage(const osi3::SensorData& SensorData,
                                   const DataType datatype);
 
     private:
 
-        void ParseGroundtruth(Message& objectMessage, LaneMessage& laneMessage);
+        void ParseGroundtruth(const osi3::GroundTruth& groundTruth,
+                              Message& objectMessage,
+                              LaneMessage& laneMessage);
 
         void ParseGroundtruthMovingObject(Message& objectMessage,
-                                          const osi::BaseMoving& baseObject,
+                                          const osi3::BaseMoving& baseObject,
                                           const ObjectType objectType,
-                                          const QString& idStr,
-                                          const bool isEgoVehicle);
+                                          const QString& idStr);
 
         void ParseGroundtruthStationaryObject(Message& objectMessage,
-                                              const osi::BaseStationary& baseObject,
+                                              const osi3::BaseStationary& baseObject,
                                               const ObjectType objectType,
-                                              const QString& idStr,
-                                              const bool isEgoVehicle);
+                                              const QString& idStr);
 
-        void ParseSensorData(Message& objectMessage,
+        void ParseSensorData(const osi3::SensorData& sensorData,
+                             Message& objectMessage,
                              LaneMessage& laneMessage);
 
         void ParseSensorDataMovingObject(Message& objectMessage,
-                                         const osi::BaseMoving& baseObject,
+                                         const osi3::BaseMoving& baseObject,
                                          const ObjectType objectType,
                                          const QString& idStr);
 
         void ParseSensorDataStationaryObject(Message& objectMessage,
-                                             const osi::BaseStationary& baseObject,
+                                             const osi3::BaseStationary& baseObject,
                                              const ObjectType objectType,
                                              const QString& idStr);
 
-        ObjectType GetObjectTypeFromOsiVehicleType(const osi::Vehicle_Type vehicleType);
-        ObjectType GetObjectTypeFromOsiObjectType(const osi::MovingObject_Type objectType);
-        ObjectType GetObjectTypeFromOsiObjectType(const osi::StationaryObject_Type objectType);
-        ObjectType GetObjectTypeFromOsiObjectType(const osi::TrafficSign_Type objectType);
-        ObjectType GetObjectTypeFromOsiObjectType(const osi::TrafficLight_Type objectType);
-        ObjectType GetObjectTypeFromHighestProbability(const osi::DetectedObject_ClassProbability& classProbability);
+        ObjectType GetObjectTypeFromOsiObjectType(const osi3::MovingObject_VehicleClassification_Type& vehicleType);
+        ObjectType GetObjectTypeFromOsiObjectType(const osi3::MovingObject_Type& objectType);
+        ObjectType GetObjectTypeFromOsiObjectType(const osi3::StationaryObject_Classification_Type& objectType);
+        ObjectType GetObjectTypeFromOsiObjectType(const osi3::TrafficSign_MainSign_Classification_Type& objectType);
+        ObjectType GetObjectTypeFromOsiObjectType(const osi3::TrafficLight_Classification_Mode& objectType);
 
-
-
-        osi::GroundTruth currentGroundTruth_;
-        osi::SensorData currentSensorData_;
-        DataType currentDataType_;
 
         bool isFirstMessage_;
 

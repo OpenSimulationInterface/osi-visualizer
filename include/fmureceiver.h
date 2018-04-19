@@ -45,7 +45,7 @@ class FMUReceiver: public QObject, public IMessageSource
         signals:
             void Connected(DataType dataType);
             void Disconnected(const QString& message = "");
-            void MessageReceived(const osi::SensorData& sensorData,
+            void MessageReceived(const osi3::SensorData& sensorData,
                                  const DataType datatype);
 
     public slots:
@@ -102,7 +102,7 @@ class FMUReceiver: public QObject, public IMessageSource
         // setup and initialize FMU
         bool initializeFMU();
         // protobuf accessors
-        bool get_fmi_sensor_data_in(osi::SensorData& data);
+        bool get_fmi_sensor_data_in(osi3::SensorData& data);
 };
 
 

@@ -26,7 +26,7 @@ class TCPReceiver : public QObject, public IMessageSource
         signals:
             void Connected(DataType dataType);
             void Disconnected(const QString& message = "");
-            void MessageReceived(const osi::SensorData& sensorData,
+            void MessageReceived(const osi3::SensorData& sensorData,
                                  const DataType datatype);
 
     public slots:

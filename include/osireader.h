@@ -8,8 +8,8 @@
 
 #pragma once
 
-#include <osi/osi_version.pb.h>
-#include <osi/osi_sensordata.pb.h>
+#include "osi_version.pb.h"
+#include "osi_sensordata.pb.h"
 
 #include <zmq.hpp>
 
@@ -62,7 +62,7 @@ class OsiReader: public QObject, public IMessageSource
             void UpdateSliderRange(int sliderRange);
             void UpdateSliderValue(int sliderValue);
             void Disconnected(const QString& message = "");
-            void MessageSendout(const osi::SensorData& SensorData,
+            void MessageSendout(const osi3::SensorData& SensorData,
                                 const DataType datatype);
 
     public slots:
@@ -74,7 +74,7 @@ class OsiReader: public QObject, public IMessageSource
 
     private:
 
-        uint64_t GetTimeStampInNanoSecond(osi::SensorData &osiSD);
+        uint64_t GetTimeStampInNanoSecond(osi3::SensorData &osiSD);
 
         void ReadHeader();
         bool CreateHeader(QString& errorMsg);

@@ -8,7 +8,7 @@
 Q_DECLARE_METATYPE(DataType)
 Q_DECLARE_METATYPE(Message)
 Q_DECLARE_METATYPE(LaneMessage)
-Q_DECLARE_METATYPE(osi::SensorData)
+Q_DECLARE_METATYPE(osi3::SensorData)
 
 
 int main(int argc, char *argv[])
@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
     qRegisterMetaType<Message>();
     qRegisterMetaType<LaneMessage>();
     qRegisterMetaType<DataType>();
-    qRegisterMetaType<osi::SensorData>();
+    qRegisterMetaType<osi3::SensorData>();
 
     QApplication app(argc, argv);
     MainWindow window;

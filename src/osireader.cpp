@@ -718,14 +718,9 @@ OsiReader::initializeFMU()
         return false;
 }
 
-#include <unistd.h>
-static int counter = 0;
 void
 OsiReader::set_fmi_sensor_data_out()
 {
-//    currentBuffer_ = std::to_string(counter++)+'\n';
-//    usleep(500000);
-    qDebug() << "FMU send message: " << counter++;
     encode_pointer_to_integer(currentBuffer_.data(),
                               integerVars_[FMI_INTEGER_SENSORDATA_IN_BASEHI_IDX],
                               integerVars_[FMI_INTEGER_SENSORDATA_IN_BASELO_IDX]);

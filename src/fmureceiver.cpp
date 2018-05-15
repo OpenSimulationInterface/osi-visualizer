@@ -50,7 +50,6 @@ static void* decode_integer_to_pointer(fmi2_integer_t hi, fmi2_integer_t lo)
 
 FMUReceiver::FMUReceiver()
     : IMessageSource()
-
     , isRunning_(false)
     , isThreadTerminated_(false)
     , currentDataType_(DataType::Groundtruth)
@@ -84,7 +83,7 @@ void FMUReceiver::ConnectRequested(const QString &ipAddress, const QString &port
             return;
         }
 
-        if (fmi2_import_get_fmu_kind(fmu_) == fmi2_fmu_kind_me)
+        if (fmi2_import_get_fmu_kind(fmu_) != fmi2_fmu_kind_cs)
         {
             QString message = "Only Co-Simulation 2.0 is supported by this code";
             emit Disconnected(message);
@@ -124,12 +123,17 @@ void
 FMUReceiver::DisconnectRequested()
 {
     if (!isConnected_)
-    {
         return;
-    }
 
     isThreadTerminated_ = false;
     isRunning_ = false;
+
+    if(fmu_ != nullptr)
+    {
+        fmi2_import_terminate(fmu_);
+        fmi2_import_free(fmu_);
+        fmi_import_free_context(context_);
+    }
 
     while (!isThreadTerminated_)
     {
@@ -156,7 +160,6 @@ FMUReceiver::ReceiveLoop()
             osi::SensorData sd;
             if (get_fmi_sensor_data_in(sd))
             {
-                qDebug() << "FMU SensorData Receive data";
                 msgReceived = true;
                 emit MessageReceived(sd, currentDataType_);
             }
@@ -230,74 +233,55 @@ FMUReceiver::initializeFMU()
     // TODO: alternative solution for start values & verify parameters for setup and initiliazation functions
     // start values
     fmi2_string_t instanceName = "Test CS model instance";
-
-    fmi2_string_t fmuLocation = "";
     fmi2_boolean_t visible = fmi2_false;
     fmi2_real_t relativeTol = 1e-4;
 
     tStart_ = 0;
     tCurrent_ = tStart_;
     fmi2_boolean_t StopTimeDefined = fmi2_false;
-
     // Do we need it?
     fmi2_string_t fmuGUID;
     fmuGUID = fmi2_import_get_GUID(fmu_);
 
-    jmStatus_ = fmi2_import_instantiate(fmu_, instanceName, fmi2_cosimulation, fmuLocation, visible);
+    jmStatus_ = fmi2_import_instantiate(fmu_, instanceName, fmi2_cosimulation, FMUPath_.c_str(), visible);
+
+    fmi2_value_reference_t vr[2];
+    vr[0] = fmi2_import_get_variable_vr(fmi2_import_get_variable_by_name(fmu_, FMI_SENDER_NAME));
+    vr[1] = fmi2_import_get_variable_vr(fmi2_import_get_variable_by_name(fmu_, FMI_RECEIVER_NAME));
+    fmi2_boolean_t booleanVars_[2];
+    booleanVars_[0] = false; // Sender
+    booleanVars_[1] = true;  // Receiver
+    fmi2_import_set_boolean(fmu_, vr, 2, booleanVars_);
+
+    vr[0] = fmi2_import_get_variable_vr(fmi2_import_get_variable_by_name(fmu_, FMI_ADDRESS_NAME));
+    vr[1] = fmi2_import_get_variable_vr(fmi2_import_get_variable_by_name(fmu_, FMI_PORT_NAME));
+    fmi2_string_t stringVars_[2];
+    stringVars_[0] = ip_.c_str();
+    stringVars_[1] = port_.c_str();
+    fmi2_import_set_string(fmu_, vr, 2, stringVars_);
+
     fmiStatus_ = fmi2_import_setup_experiment(fmu_, fmi2_true, relativeTol, tStart_, StopTimeDefined, tEnd_);
     fmiStatus_ = fmi2_import_enter_initialization_mode(fmu_);
     fmiStatus_ = fmi2_import_exit_initialization_mode(fmu_);
 
-    vr_[FMI_INTEGER_SENSORDATA_IN_BASELO_IDX] = FMI_INTEGER_SENSORDATA_IN_BASELO_IDX;
-    vr_[FMI_INTEGER_SENSORDATA_IN_BASEHI_IDX] = FMI_INTEGER_SENSORDATA_IN_BASEHI_IDX;
-    vr_[FMI_INTEGER_SENSORDATA_IN_SIZE_IDX] = FMI_INTEGER_SENSORDATA_IN_SIZE_IDX;
-    vr_[FMI_INTEGER_SENSORDATA_OUT_BASELO_IDX] = FMI_INTEGER_SENSORDATA_OUT_BASELO_IDX;
-    vr_[FMI_INTEGER_SENSORDATA_OUT_BASEHI_IDX] = FMI_INTEGER_SENSORDATA_OUT_BASEHI_IDX;
-    vr_[FMI_INTEGER_SENSORDATA_OUT_SIZE_IDX] = FMI_INTEGER_SENSORDATA_OUT_SIZE_IDX;
+    vr_[FMI_INTEGER_SENSORDATA_OUT_BASELO_IDX] = fmi2_import_get_variable_vr(fmi2_import_get_variable_by_name(fmu_, FMI_DATA_OUT_BASELO_NAME));
+    vr_[FMI_INTEGER_SENSORDATA_OUT_BASEHI_IDX] = fmi2_import_get_variable_vr(fmi2_import_get_variable_by_name(fmu_, FMI_DATA_OUT_BASEHI_NAME));
+    vr_[FMI_INTEGER_SENSORDATA_OUT_SIZE_IDX] = fmi2_import_get_variable_vr(fmi2_import_get_variable_by_name(fmu_, FMI_DATA_OUT_SIZE_NAME));
 
-    integerVars_[FMI_INTEGER_SENSORDATA_IN_BASELO_IDX] = 0;
-    integerVars_[FMI_INTEGER_SENSORDATA_IN_BASEHI_IDX] = 0;
-    integerVars_[FMI_INTEGER_SENSORDATA_IN_SIZE_IDX] = 0;
-
-    integerVars_[FMI_INTEGER_SENSORDATA_OUT_BASELO_IDX] = 0;
-    integerVars_[FMI_INTEGER_SENSORDATA_OUT_BASEHI_IDX] = 0;
-    integerVars_[FMI_INTEGER_SENSORDATA_OUT_SIZE_IDX] = 0;
-
-    /* Boolean Variables defined in the OSMPCNetworkProxy.h */
-    //    #define FMI_BOOLEAN_DUMMY_IDX 0
-    //    #define FMI_BOOLEAN_SENDER_IDX 1
-    //    #define FMI_BOOLEAN_RECEIVER_IDX 2
-    fmi2_boolean_t booleanVars_[3];
-    booleanVars_[0] = 0;
-    booleanVars_[1] = 0;
-    booleanVars_[2] = 1;
-    fmi2_status_t status1 = fmi2_import_set_boolean(fmu_, vr_, 3, booleanVars_);
-
-    /* String Variables */
-    //    #define FMI_STRING_ADDRESS_IDX 0
-    //    #define FMI_STRING_PORT_IDX 1
-
-    fmi2_string_t stringVars_[2];
-    stringVars_[0] = ip_.c_str();
-    stringVars_[1] = port_.c_str();
-    fmi2_status_t status2 = fmi2_import_set_string(fmu_, vr_, 2, stringVars_);
-
-    return status1 == fmi2_status_ok && status2 == fmi2_status_ok;
+    return true;
 }
 
 bool
 FMUReceiver::get_fmi_sensor_data_in(osi::SensorData& data)
 {
-    fmiStatus_ = fmi2_import_get_integer(fmu_, vr_, FMI_INTEGER_VARS, integerVars_);
-//    qDebug() << "rx buffer size: " << integerVars_[FMI_INTEGER_SENSORDATA_OUT_SIZE_IDX];
-    if (integerVars_[FMI_INTEGER_SENSORDATA_OUT_SIZE_IDX] > 0)
+    fmi2_integer_t integerVars[FMI_INTEGER_OUT_VARS];
+    fmiStatus_ = fmi2_import_get_integer(fmu_, vr_, FMI_INTEGER_OUT_VARS, integerVars);
+    if (integerVars[FMI_INTEGER_SENSORDATA_OUT_SIZE_IDX] > 0)
     {
-        void* buffer = decode_integer_to_pointer(integerVars_[FMI_INTEGER_SENSORDATA_OUT_BASEHI_IDX],
-                                                 integerVars_[FMI_INTEGER_SENSORDATA_OUT_BASELO_IDX]);
+        void* buffer = decode_integer_to_pointer(integerVars[FMI_INTEGER_SENSORDATA_OUT_BASEHI_IDX],
+                                                 integerVars[FMI_INTEGER_SENSORDATA_OUT_BASELO_IDX]);
 
-        qDebug() << "rx buffer: " << (char*) buffer;
-
-        return data.ParseFromArray(buffer, integerVars_[FMI_INTEGER_SENSORDATA_OUT_SIZE_IDX]);
+        return data.ParseFromArray(buffer, integerVars[FMI_INTEGER_SENSORDATA_OUT_SIZE_IDX]);
     }
 
     return false;

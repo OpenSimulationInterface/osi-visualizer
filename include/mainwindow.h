@@ -83,7 +83,9 @@ class MainWindow : public QMainWindow
         void UpdateSliderRange(int sliderRange);
         void UpdateSliderRange2(int sliderRange);
         void UpdateSliderValue(int sliderValue);
+        void UpdateSliderTime(int sliderValue);
         void UpdateSliderValue2(int sliderValue);
+        void UpdateSliderTime2(int sliderValue);
 
         void DisplayObjectInformation(GLObject* object);
         void DisplayObjectInformation2(GLObject* object);

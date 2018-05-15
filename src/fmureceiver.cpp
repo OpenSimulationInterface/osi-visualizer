@@ -65,6 +65,7 @@ void FMUReceiver::ConnectRequested(const QString &ipAddress, const QString &port
         port_ = port.toStdString();
         FMUPath_ = fmuPath.toStdString();
         tmpPath_ = FMUPath_.substr(0, FMUPath_.find_last_of("/\\"));
+        currentDataType_ = dataType;
 
         // Start initialization
         if (!initializeFMUWrapper())

@@ -67,6 +67,7 @@ OsiReader::OsiReader(int* deltaDelay,
 
     , osiFileName_()
     , osiHeaderName_()
+    , firstTimeStamp_(0)
     , stamp2Offset_()
     , iterStamp_()
     , iterMutex_()
@@ -97,7 +98,6 @@ OsiReader::OsiReader(int* deltaDelay,
     , logLevel_(LogLevel::Warn)
     , currentBuffer_()
     , vr_()
-    , integerVars_()
 {
 }
 
@@ -173,13 +173,14 @@ OsiReader::StopReadFile()
         isRunning_ = false;
         isPaused_ = false;
 
+        FreeFMUConnection();
+
         while(!isReadTerminated_)
         {
             QThread::msleep(50);
         }
 
         QString errMsg = SetupConnection(false);
-        FreeFMUConnection();
 
         isConnected_ = false;
         emit Disconnected(errMsg);
@@ -238,11 +239,11 @@ OsiReader::SliderValueChanged(int newValue)
             if(osiSD.ParseFromString(str_line))
             {
                 uint64_t curStamp = GetTimeStampInNanoSecond(osiSD);
-                MessageSendout(osiSD, defaultDatatype_);
+                emit MessageSendout(osiSD, defaultDatatype_);
                 SendOutMessage(str_line);
                 // update slider value in millisecond level
-                int sliderValue = curStamp / 1000000;
-                UpdateSliderValue(sliderValue);
+                int sliderValue = (curStamp - firstTimeStamp_) / 1000000;
+                emit UpdateSliderValue(sliderValue);
                 break;
             }
         }
@@ -387,7 +388,6 @@ OsiReader::SendMessageLoop()
             std::string str_backup = "";
             size_t size_found;
 
-            uint64_t firstTimeStamp (0);
             uint64_t preTimeStamp (0);
             bool isRefreshMessage (true);
 
@@ -419,7 +419,7 @@ OsiReader::SendMessageLoop()
 
                     if(isFirstMessage)
                     {
-                        firstTimeStamp = curStamp;
+                        firstTimeStamp_ = curStamp;
                         isFirstMessage = false;
                     }
 
@@ -439,11 +439,11 @@ OsiReader::SendMessageLoop()
                     usleep(sleep);
                     preTimeStamp = curStamp;
 
-                    MessageSendout(osiSD, defaultDatatype_);
+                    emit MessageSendout(osiSD, defaultDatatype_);
                     SendOutMessage(str_line);
                     // update slider value in millisecond level
-                    int sliderValue = (curStamp - firstTimeStamp) / 1000000;
-                    UpdateSliderValue(sliderValue);
+                    int sliderValue = (curStamp - firstTimeStamp_) / 1000000;
+                    emit UpdateSliderValue(sliderValue);
 
                     ++iterStamp_;
                     if(iterStamp_ == stamp2Offset_.end())
@@ -581,7 +581,7 @@ OsiReader::SetFMUConnection()
             if (!fmu_ && errMsg.isEmpty())
                 errMsg = "Error parsing modeldescription.xml of fmu ";
 
-            if (fmi2_import_get_fmu_kind(fmu_) == fmi2_fmu_kind_me  && errMsg.isEmpty())
+            if (fmi2_import_get_fmu_kind(fmu_) != fmi2_fmu_kind_cs  && errMsg.isEmpty())
                 errMsg = "Only Co-Simulation 2.0 is supported by this code";
 
             if (!importFMU() && errMsg.isEmpty())
@@ -602,10 +602,13 @@ OsiReader::SetFMUConnection()
 void
 OsiReader::FreeFMUConnection()
 {
-    fmi2_import_destroy_dllfmu(fmu_);
-    fmi2_import_free(fmu_);
-    fmi_import_free_context(fmuContext_);
-    fmu_ = nullptr;
+    if(fmu_ != nullptr)
+    {
+        fmi2_import_terminate(fmu_);
+        fmi2_import_free(fmu_);
+        fmi_import_free_context(fmuContext_);
+        fmu_ = nullptr;
+    }
 }
 
 bool
@@ -661,72 +664,54 @@ OsiReader::initializeFMU()
     // TODO: alternative solution for start values & verify parameters for setup and initiliazation functions
     // start values
     fmi2_string_t instanceName = "Test CS model instance";
-
-    fmi2_string_t fmuLocation = "";
     fmi2_boolean_t visible = fmi2_false;
     fmi2_real_t relativeTol = 1e-4;
 
     tStart_ = 0;
     tCurrent_ = tStart_;
     fmi2_boolean_t StopTimeDefined = fmi2_false;
-
     // Do we need it?
     fmi2_string_t fmuGUID;
     fmuGUID = fmi2_import_get_GUID(fmu_);
 
-    jmStatus_ = fmi2_import_instantiate(fmu_, instanceName, fmi2_cosimulation, fmuLocation, visible);
+    jmStatus_ = fmi2_import_instantiate(fmu_, instanceName, fmi2_cosimulation, FMUPath_.c_str(), visible);
+
+    fmi2_value_reference_t vr[2];
+    vr[0] = fmi2_import_get_variable_vr(fmi2_import_get_variable_by_name(fmu_, FMI_SENDER_NAME));
+    vr[1] = fmi2_import_get_variable_vr(fmi2_import_get_variable_by_name(fmu_, FMI_RECEIVER_NAME));
+    fmi2_boolean_t booleanVars_[2];
+    booleanVars_[0] = true;  // Sender
+    booleanVars_[1] = false; // Receiver
+    fmi2_import_set_boolean(fmu_, vr, 2, booleanVars_);
+
+    vr[0] = fmi2_import_get_variable_vr(fmi2_import_get_variable_by_name(fmu_, FMI_ADDRESS_NAME));
+    vr[1] = fmi2_import_get_variable_vr(fmi2_import_get_variable_by_name(fmu_, FMI_PORT_NAME));
+    fmi2_string_t stringVars_[2];
+    stringVars_[0] = "127.0.0.1";
+    stringVars_[1] = pubPortNumber_.c_str();
+    fmi2_import_set_string(fmu_, vr, 2, stringVars_);
+
     fmiStatus_ = fmi2_import_setup_experiment(fmu_, fmi2_true, relativeTol, tStart_, StopTimeDefined, tEnd_);
     fmiStatus_ = fmi2_import_enter_initialization_mode(fmu_);
     fmiStatus_ = fmi2_import_exit_initialization_mode(fmu_);
 
-    vr_[FMI_INTEGER_SENSORDATA_IN_BASELO_IDX] = FMI_INTEGER_SENSORDATA_IN_BASELO_IDX;
-    vr_[FMI_INTEGER_SENSORDATA_IN_BASEHI_IDX] = FMI_INTEGER_SENSORDATA_IN_BASEHI_IDX;
-    vr_[FMI_INTEGER_SENSORDATA_IN_SIZE_IDX] = FMI_INTEGER_SENSORDATA_IN_SIZE_IDX;
-    vr_[FMI_INTEGER_SENSORDATA_OUT_BASELO_IDX] = FMI_INTEGER_SENSORDATA_OUT_BASELO_IDX;
-    vr_[FMI_INTEGER_SENSORDATA_OUT_BASEHI_IDX] = FMI_INTEGER_SENSORDATA_OUT_BASEHI_IDX;
-    vr_[FMI_INTEGER_SENSORDATA_OUT_SIZE_IDX] = FMI_INTEGER_SENSORDATA_OUT_SIZE_IDX;
+    vr_[FMI_INTEGER_SENSORDATA_IN_BASELO_IDX] = fmi2_import_get_variable_vr(fmi2_import_get_variable_by_name(fmu_, FMI_DATA_IN_BASELO_NAME));
+    vr_[FMI_INTEGER_SENSORDATA_IN_BASEHI_IDX] = fmi2_import_get_variable_vr(fmi2_import_get_variable_by_name(fmu_, FMI_DATA_IN_BASEHI_NAME));
+    vr_[FMI_INTEGER_SENSORDATA_IN_SIZE_IDX] = fmi2_import_get_variable_vr(fmi2_import_get_variable_by_name(fmu_, FMI_DATA_IN_SIZE_NAME));
 
-    integerVars_[FMI_INTEGER_SENSORDATA_IN_BASELO_IDX] = 0;
-    integerVars_[FMI_INTEGER_SENSORDATA_IN_BASEHI_IDX] = 0;
-    integerVars_[FMI_INTEGER_SENSORDATA_IN_SIZE_IDX] = 0;
-
-    integerVars_[FMI_INTEGER_SENSORDATA_OUT_BASELO_IDX] = 0;
-    integerVars_[FMI_INTEGER_SENSORDATA_OUT_BASEHI_IDX] = 0;
-    integerVars_[FMI_INTEGER_SENSORDATA_OUT_SIZE_IDX] = 0;
-
-    /* Boolean Variables defined in the OSMPCNetworkProxy.h */
-    //    #define FMI_BOOLEAN_DUMMY_IDX 0
-    //    #define FMI_BOOLEAN_SENDER_IDX 1
-    //    #define FMI_BOOLEAN_RECEIVER_IDX 2
-    fmi2_boolean_t booleanVars_[3];
-    booleanVars_[0] = 0;
-    booleanVars_[1] = 1;
-    booleanVars_[2] = 0;
-    fmi2_status_t status1 = fmi2_import_set_boolean(fmu_, vr_, 3, booleanVars_);
-
-    /* String Variables */
-    //    #define FMI_STRING_ADDRESS_IDX 0
-    //    #define FMI_STRING_PORT_IDX 1
-    fmi2_string_t stringVars_[2];
-    stringVars_[0] = "127.0.0.1";
-    stringVars_[1] = pubPortNumber_.c_str();
-    fmi2_status_t status2 = fmi2_import_set_string(fmu_, vr_, 2, stringVars_);
-
-    if (status1 == fmi2_status_ok && status2 == fmi2_status_ok)
-        return true;
-    else
-        return false;
+    return true;
 }
 
 void
 OsiReader::set_fmi_sensor_data_out()
 {
+    fmi2_integer_t integerVars[FMI_INTEGER_IN_VARS];
     encode_pointer_to_integer(currentBuffer_.data(),
-                              integerVars_[FMI_INTEGER_SENSORDATA_IN_BASEHI_IDX],
-                              integerVars_[FMI_INTEGER_SENSORDATA_IN_BASELO_IDX]);
-    integerVars_[FMI_INTEGER_SENSORDATA_IN_SIZE_IDX] = (fmi2_integer_t)currentBuffer_.length();
+                              integerVars[FMI_INTEGER_SENSORDATA_IN_BASEHI_IDX],
+                              integerVars[FMI_INTEGER_SENSORDATA_IN_BASELO_IDX]);
+    integerVars[FMI_INTEGER_SENSORDATA_IN_SIZE_IDX] = (fmi2_integer_t)currentBuffer_.length();
 
-    fmiStatus_ = fmi2_import_set_integer(fmu_, vr_, FMI_INTEGER_VARS, integerVars_);
+    fmiStatus_ = fmi2_import_set_integer(fmu_, vr_, FMI_INTEGER_IN_VARS, integerVars);
 }
 
 

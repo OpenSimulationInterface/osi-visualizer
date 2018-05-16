@@ -69,8 +69,8 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui_->setupUi(this);
 
-    QPixmap logo(config_.srcPath_ + "Resources/Images/BMW_Logo.png");
-    ui_->logoLabel->setPixmap(logo);
+//    QPixmap logo(config_.srcPath_ + "Resources/Images/BMW_Logo.png");
+//    ui_->logoLabel->setPixmap(logo);
 
     InitObjectTree();
     InitObjectTree2();
@@ -109,6 +109,8 @@ MainWindow::MainWindow(QWidget *parent)
     TogglePlayPauseButton2();
     EnableSlider(false);
     EnableSlider2(false);
+    UpdateGLWidgetMessageSource();
+    UpdateGLWidgetMessageSource2();
 
     QTimer::singleShot(1000, this, SLOT(showMaximized()));
 }
@@ -266,6 +268,7 @@ MainWindow::CheckBoxFMURx()
     bool enableFmu = ui_->checkBoxFMURx->isChecked();
     ui_->loadFMURx->setEnabled(enableFmu);
     ui_->loadFMURxBrowse->setEnabled(enableFmu);
+    UpdateGLWidgetMessageSource();
 }
 
 void
@@ -274,6 +277,7 @@ MainWindow::CheckBoxFMURx2()
     bool enableFmu = ui_->checkBoxFMURx_2->isChecked();
     ui_->loadFMURx_2->setEnabled(enableFmu);
     ui_->loadFMURxBrowse_2->setEnabled(enableFmu);
+    UpdateGLWidgetMessageSource2();
 }
 
 void
@@ -749,11 +753,15 @@ MainWindow::ConnectSignalsToSlots()
     connect(tcpReceiver_, &TCPReceiver::Connected, glWidget_, &GLWidget::Connected, Qt::DirectConnection);
     connect(tcpReceiver_, &TCPReceiver::Disconnected, glWidget_, &GLWidget::Disconnected, Qt::DirectConnection);
 
+    connect(tcpReceiver_, &TCPReceiver::UpdateSliderTime, this, &MainWindow::UpdateSliderTime);
+
     connect(this, &MainWindow::ConnectRequested2, tcpReceiver2_, &TCPReceiver::ConnectRequested, Qt::QueuedConnection);
     connect(tcpReceiver2_, &TCPReceiver::Connected, this, &MainWindow::Connected2);
     connect(tcpReceiver2_, &TCPReceiver::Disconnected, this, &MainWindow::Disconnected2);
     connect(tcpReceiver2_, &TCPReceiver::Connected, glWidget2_, &GLWidget::Connected, Qt::DirectConnection);
     connect(tcpReceiver2_, &TCPReceiver::Disconnected, glWidget2_, &GLWidget::Disconnected, Qt::DirectConnection);
+
+    connect(tcpReceiver2_, &TCPReceiver::UpdateSliderTime, this, &MainWindow::UpdateSliderTime2);
 
     connect(this, &MainWindow::FMUConnectRequested, fmuReceiver_, &FMUReceiver::ConnectRequested, Qt::QueuedConnection);
     connect(fmuReceiver_, &FMUReceiver::Connected, this, &MainWindow::Connected);
@@ -1199,7 +1207,6 @@ MainWindow::UpdateConfigure()
     {
         hasChange = true;
         config_.ch1LoadFMUTx_ = ui_->loadFMUTx->text();
-//        reader_->SetSendOutFMUPath(config_.ch1LoadFMUTx_.toStdString());
     }
 
     if(hasChange || saveChange)
@@ -1232,16 +1239,16 @@ MainWindow::UpdateConfigure2()
         config_.ch2DataType_ = (DataType)ui_->dataType_2->currentIndex();
     }
 
-    if(config_.ch2FMURxCheck_ != (ui_->checkBoxFMURx->checkState() == Qt::Checked))
+    if(config_.ch2FMURxCheck_ != (ui_->checkBoxFMURx_2->checkState() == Qt::Checked))
     {
         saveChange = true;
-        config_.ch2FMURxCheck_ = (ui_->checkBoxFMURx->checkState() == Qt::Checked);
+        config_.ch2FMURxCheck_ = (ui_->checkBoxFMURx_2->checkState() == Qt::Checked);
     }
 
-    if(config_.ch2LoadFMURx_ != ui_->loadFMURx->text())
+    if(config_.ch2LoadFMURx_ != ui_->loadFMURx_2->text())
     {
         hasChange = true;
-        config_.ch2LoadFMURx_ = ui_->loadFMURx->text();
+        config_.ch2LoadFMURx_ = ui_->loadFMURx_2->text();
     }
 
     if(config_.ch2LoadFile_ != ui_->loadFile_2->text())
@@ -1402,7 +1409,7 @@ MainWindow::InitLoadConfigure()
         config_.typeColors_.insert(ObjectType::TrafficSign,   Qt::white);
         config_.typeColors_.insert(ObjectType::TrafficLight,  Qt::darkGreen);
         ui_->actionShowGrid->setChecked(true);
-        ui_->actionShowObject->setChecked(true);
+        ui_->actionShowObject->setChecked(false);
     }
 }
 
@@ -2026,6 +2033,12 @@ MainWindow::UpdateSliderValue(int sliderValue)
     ui_->hSlider->blockSignals(true);
     ui_->hSlider->setValue(sliderValue);
     ui_->hSlider->blockSignals(false);
+    UpdateSliderTime(sliderValue);
+}
+
+void
+MainWindow::UpdateSliderTime(int sliderValue)
+{
     ui_->hSliderTime->setText(GetStringFromMilliSecond(sliderValue));
 }
 
@@ -2035,6 +2048,12 @@ MainWindow::UpdateSliderValue2(int sliderValue)
     ui_->hSlider_2->blockSignals(true);
     ui_->hSlider_2->setValue(sliderValue);
     ui_->hSlider_2->blockSignals(false);
+    UpdateSliderTime2(sliderValue);
+}
+
+void
+MainWindow::UpdateSliderTime2(int sliderValue)
+{
     ui_->hSliderTime_2->setText(GetStringFromMilliSecond(sliderValue));
 }
 

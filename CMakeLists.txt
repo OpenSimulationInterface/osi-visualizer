@@ -63,12 +63,7 @@ set(HEADERS
 
 
 include_directories(
-    /usr/local/include/fmi-library
     ${CMAKE_CURRENT_LIST_DIR}/include
-)
-
-link_directories(
-    /usr/local/lib/fmi-library
 )
 
 

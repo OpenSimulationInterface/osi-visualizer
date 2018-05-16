@@ -23,17 +23,22 @@ extern "C" {
 #include <fmilib.h>
 }
 
-#define FMI_INTEGER_SENSORDATA_IN_BASELO_IDX 0
-#define FMI_INTEGER_SENSORDATA_IN_BASEHI_IDX 1
-#define FMI_INTEGER_SENSORDATA_IN_SIZE_IDX 2
-#define FMI_INTEGER_SENSORDATA_OUT_BASELO_IDX 3
-#define FMI_INTEGER_SENSORDATA_OUT_BASEHI_IDX 4
-#define FMI_INTEGER_SENSORDATA_OUT_SIZE_IDX 5
-#define FMI_INTEGER_LAST_IDX FMI_INTEGER_SENSORDATA_OUT_SIZE_IDX
-#define FMI_INTEGER_VARS (FMI_INTEGER_LAST_IDX + 1)
+/* The following names come from FMU modelDescription.in.xml */
+#define FMI_SENDER_NAME   "sender"
+#define FMI_RECEIVER_NAME "receiver"
+#define FMI_ADDRESS_NAME  "address"
+#define FMI_PORT_NAME     "port"
 
+#define FMI_DATA_OUT_BASELO_NAME "OSMPSensorDataOut.base.lo"
+#define FMI_DATA_OUT_BASEHI_NAME "OSMPSensorDataOut.base.hi"
+#define FMI_DATA_OUT_SIZE_NAME   "OSMPSensorDataOut.size"
 
-
+/* local index defines */
+#define FMI_INTEGER_SENSORDATA_OUT_BASELO_IDX 0 // correspond to FMI_DATA_OUT_BASELO_NAME
+#define FMI_INTEGER_SENSORDATA_OUT_BASEHI_IDX 1 // correspond to FMI_DATA_OUT_BASEHI_NAME
+#define FMI_INTEGER_SENSORDATA_OUT_SIZE_IDX   2 // correspond to FMI_DATA_OUT_SIZE_NAME
+#define FMI_INTEGER_LAST_OUT_IDX FMI_INTEGER_SENSORDATA_OUT_SIZE_IDX
+#define FMI_INTEGER_OUT_VARS (FMI_INTEGER_LAST_OUT_IDX + 1)
 
 class FMUReceiver: public QObject, public IMessageSource
 {
@@ -89,11 +94,8 @@ class FMUReceiver: public QObject, public IMessageSource
             Debug
         };
         LogLevel logLevel_;
-
         std::string currentBuffer_;
-
-        fmi2_value_reference_t vr_[FMI_INTEGER_VARS];
-        fmi2_integer_t integerVars_[FMI_INTEGER_VARS];
+        fmi2_value_reference_t vr_[FMI_INTEGER_OUT_VARS];
 
         // initialize fmu wrapper specific logger, create fmi import context and check fmi version
         bool initializeFMUWrapper();

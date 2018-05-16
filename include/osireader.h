@@ -24,22 +24,27 @@
 #include "types.h"
 
 
-
 extern "C" {
 #include <JM/jm_portability.h>
 #include <fmilib.h>
 }
 
-#define FMI_INTEGER_SENSORDATA_IN_BASELO_IDX 0
-#define FMI_INTEGER_SENSORDATA_IN_BASEHI_IDX 1
-#define FMI_INTEGER_SENSORDATA_IN_SIZE_IDX 2
-#define FMI_INTEGER_SENSORDATA_OUT_BASELO_IDX 3
-#define FMI_INTEGER_SENSORDATA_OUT_BASEHI_IDX 4
-#define FMI_INTEGER_SENSORDATA_OUT_SIZE_IDX 5
-#define FMI_INTEGER_LAST_IDX FMI_INTEGER_SENSORDATA_OUT_SIZE_IDX
-#define FMI_INTEGER_VARS (FMI_INTEGER_LAST_IDX + 1)
 
+#define FMI_SENDER_NAME   "sender"
+#define FMI_RECEIVER_NAME "receiver"
+#define FMI_ADDRESS_NAME  "address"
+#define FMI_PORT_NAME     "port"
 
+#define FMI_DATA_IN_BASELO_NAME "OSMPSensorViewIn.base.lo"
+#define FMI_DATA_IN_BASEHI_NAME "OSMPSensorViewIn.base.hi"
+#define FMI_DATA_IN_SIZE_NAME   "OSMPSensorViewIn.size"
+
+/* local index defines */
+#define FMI_INTEGER_SENSORDATA_IN_BASELO_IDX 0 // correspond to FMI_DATA_IN_BASELO_NAME
+#define FMI_INTEGER_SENSORDATA_IN_BASEHI_IDX 1 // correspond to FMI_DATA_IN_BASEHI_NAME
+#define FMI_INTEGER_SENSORDATA_IN_SIZE_IDX   2 // correspond to FMI_DATA_IN_SIZE_NAME
+#define FMI_INTEGER_LAST_IN_IDX FMI_INTEGER_SENSORDATA_IN_SIZE_IDX
+#define FMI_INTEGER_IN_VARS (FMI_INTEGER_LAST_IN_IDX + 1)
 
 
 class OsiReader: public QObject, public IMessageSource
@@ -96,6 +101,7 @@ class OsiReader: public QObject, public IMessageSource
         QString osiFileName_;
         QString osiHeaderName_;
 
+        uint64_t firstTimeStamp_;
         // std::map<time stamp in nanosecond, input file stream position>
         std::vector<std::pair<uint64_t, std::streamoff> > stamp2Offset_;
         std::vector<std::pair<uint64_t, std::streamoff> >::iterator iterStamp_;
@@ -133,8 +139,7 @@ class OsiReader: public QObject, public IMessageSource
             Debug
         };
         LogLevel logLevel_;
-        fmi2_value_reference_t vr_[FMI_INTEGER_VARS];
-        fmi2_integer_t integerVars_[FMI_INTEGER_VARS];
+        fmi2_value_reference_t vr_[FMI_INTEGER_IN_VARS];
 
         // Initialize fmu wrapper specific logger, create fmi import context and check fmi version
         bool initializeFMUWrapper();

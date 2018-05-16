@@ -45,12 +45,12 @@ AppConfig::AppConfig(QString fileName)
 
     , combineChannel_(false)
     , showGrid_(true)
-    , showObjectDetails_(true)
+    , showObjectDetails_(false)
     , lockCamera_(false)
     , laneType_(LaneType::BoundaryLanes)
     , typeColors_()
 
-    , osiMsgSaveThreshold_(1000)
+    , osiMsgSaveThreshold_(1000000)
     , srcPath_("./")
 
     , configFileName_(fileName)

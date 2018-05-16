@@ -59,8 +59,11 @@ OsiParser::ParseReceivedMessage(const osi3::SensorData& sensorData,
 
     if (datatype == DataType::Groundtruth)
     {
-        const osi3::GroundTruth& groundTruth = sensorData.sensor_view(0).global_ground_truth();
-        ParseGroundtruth(groundTruth, objectMessage, laneMessage);
+        if(sensorData.sensor_view_size() > 0)
+        {
+            const osi3::GroundTruth& groundTruth = sensorData.sensor_view(0).global_ground_truth();
+            ParseGroundtruth(groundTruth, objectMessage, laneMessage);
+        }
     }
     else if (datatype == DataType::SensorData)
     {
@@ -80,13 +83,9 @@ OsiParser::ParseGroundtruth(const osi3::GroundTruth& groundTruth,
     for (int i = 0; i < groundTruth.moving_object_size(); ++i)
     {
         const osi3::MovingObject& object = groundTruth.moving_object(i);
-        ObjectType objectType = GetObjectTypeFromOsiObjectType(object.type());
+        ObjectType objectType = GetObjectTypeFromOsiObjectType(object.vehicle_classification().type());
         QString idStr = QString::number(object.id().value());
-
-        ParseGroundtruthMovingObject(objectMessage,
-                                     object.base(),
-                                     objectType,
-                                     idStr);
+        ParseGroundtruthMovingObject(objectMessage, object.base(), objectType, idStr);
     }
 
     for (int i = 0; i < groundTruth.stationary_object_size(); ++i)
@@ -94,46 +93,28 @@ OsiParser::ParseGroundtruth(const osi3::GroundTruth& groundTruth,
         const osi3::StationaryObject& object = groundTruth.stationary_object(i);
         ObjectType objectType = GetObjectTypeFromOsiObjectType(object.classification().type());
         QString idStr = QString::number(object.id().value());
-
-        ParseGroundtruthStationaryObject(objectMessage,
-                                         object.base(),
-                                         objectType,
-                                         idStr);
-    }
-
-    for (int i = 0; i < groundTruth.moving_object_size(); ++i)
-    {
-        const osi3::MovingObject& mvObj = groundTruth.moving_object(i);
-        ObjectType objectType = GetObjectTypeFromOsiObjectType(mvObj.type());
-        QString idStr = QString::number(mvObj.id().value());
-
-        ParseGroundtruthMovingObject(objectMessage,
-                                     mvObj.base(),
-                                     objectType,
-                                     idStr);
+        ParseGroundtruthStationaryObject(objectMessage, object.base(), objectType, idStr);
     }
 
     for (int i = 0; i < groundTruth.traffic_sign_size(); ++i)
     {
         const osi3::TrafficSign& sign = groundTruth.traffic_sign(i);
         QString idStr = QString::number(sign.id().value());
-
-        ParseGroundtruthStationaryObject(objectMessage,
-                                         sign.main_sign().base(),
-                                         ObjectType::TrafficSign,
-                                         idStr);
+        ParseGroundtruthStationaryObject(objectMessage, sign.main_sign().base(), ObjectType::TrafficSign, idStr);
     }
-
 
     for (int i = 0; i < groundTruth.traffic_light_size(); ++i)
     {
         const osi3::TrafficLight& light = groundTruth.traffic_light(i);
         QString idStr = QString::number(light.id().value());
+        ParseGroundtruthStationaryObject(objectMessage, light.base(), ObjectType::TrafficLight, idStr);
+    }
 
-        ParseGroundtruthStationaryObject(objectMessage,
-                                         light.base(),
-                                         ObjectType::TrafficLight,
-                                         idStr);
+    for (int i = 0; i < groundTruth.road_marking_size(); ++i)
+    {
+        const osi3::RoadMarking& roadM = groundTruth.road_marking(i);
+        QString idStr = QString::number(roadM.id().value());
+        ParseGroundtruthStationaryObject(objectMessage, roadM.base(), ObjectType::OtherObject, idStr);
     }
 
     // DRAW_CENTER_LINES
@@ -269,8 +250,8 @@ OsiParser::ParseSensorData(const osi3::SensorData &sensorData,
     for (int i = 0; i < sensorData.moving_object_size(); ++i)
     {
         const osi3::DetectedMovingObject& dectObj = sensorData.moving_object(i);
-        double highestProbability = -1;
-        int highestIndex = 0;
+        double highestProbability = 0;
+        int highestIndex = -1;
         for(int j = 0; j < dectObj.candidate().size(); ++j)
         {
             const osi3::DetectedMovingObject_CandidateMovingObject candi = dectObj.candidate(j);
@@ -281,9 +262,12 @@ OsiParser::ParseSensorData(const osi3::SensorData &sensorData,
             }
         }
 
-        ObjectType objectType = GetObjectTypeFromOsiObjectType(dectObj.candidate(highestIndex).vehicle_classification().type());
-        QString idStr = QString::number(dectObj.header().ground_truth_id(highestIndex).value());
-        ParseSensorDataMovingObject(objectMessage, dectObj.base(), objectType, idStr);
+        if(highestIndex > -1)
+        {
+            ObjectType objectType = GetObjectTypeFromOsiObjectType(dectObj.candidate(highestIndex).vehicle_classification().type());
+            QString idStr = QString::number(dectObj.header().ground_truth_id(highestIndex).value());
+            ParseSensorDataMovingObject(objectMessage, dectObj.base(), objectType, idStr);
+        }
     }
 
     for (int i = 0; i < sensorData.traffic_sign_size(); ++i)
@@ -293,12 +277,26 @@ OsiParser::ParseSensorData(const osi3::SensorData &sensorData,
         ParseSensorDataStationaryObject(objectMessage, dectMS.base(), ObjectType::TrafficSign, idStr);
     }
 
+    for (int i = 0; i < sensorData.traffic_light_size(); ++i)
+    {
+        const osi3::DetectedTrafficLight& dectTL = sensorData.traffic_light(i);
+        QString idStr = QString::number(dectTL.header().tracking_id().value());
+        ParseSensorDataStationaryObject(objectMessage, dectTL.base(), ObjectType::TrafficLight, idStr);
+    }
+
+    for (int i = 0; i < sensorData.road_marking_size(); ++i)
+    {
+        const osi3::DetectedRoadMarking& dectRM = sensorData.road_marking(i);
+        QString idStr = QString::number(dectRM.header().tracking_id().value());
+        ParseSensorDataStationaryObject(objectMessage, dectRM.base(), ObjectType::OtherObject, idStr);
+    }
+
     // DRAW_CENTER_LINES
     for (int i = 0; i < sensorData.lane_size(); ++i)
     {
         const osi3::DetectedLane& detectL = sensorData.lane(i);
 
-        int highestProbability = -1;
+        int highestProbability = 0;
         int highestProbabilityIndex = -1;
         for(int i = 0; i < detectL.candidate_size(); ++i)
         {
@@ -351,7 +349,7 @@ OsiParser::ParseSensorData(const osi3::SensorData &sensorData,
 
             if(position.x() != 0 || position.y() != 0 || position.z() != 0)
             {
-                boundaryLines.append(QVector3D(position.y(), 0, position.x()));
+                boundaryLines.append(QVector3D(position.x(), 0, -position.y()));
             }
             else if(!boundaryLines.empty())
             {
@@ -561,7 +559,7 @@ OsiParser::GetObjectTypeFromOsiObjectType(const osi3::MovingObject_Type& objectT
             objType = ObjectType::OtherObject;
             break;
         case osi3::MovingObject_Type_TYPE_VEHICLE:
-            objType = ObjectType::Pedestrian;
+            objType = ObjectType::Car;
             break;
         case osi3::MovingObject_Type_TYPE_PEDESTRIAN:
             objType = ObjectType::Pedestrian;

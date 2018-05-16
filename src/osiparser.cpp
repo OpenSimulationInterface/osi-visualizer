@@ -273,22 +273,68 @@ OsiParser::ParseSensorData(const osi3::SensorData &sensorData,
     for (int i = 0; i < sensorData.traffic_sign_size(); ++i)
     {
         const osi3::DetectedTrafficSign_DetectedMainSign& dectMS = sensorData.traffic_sign(i).main_sign();
-        QString idStr = QString::number(sensorData.traffic_sign(i).header().tracking_id().value());
-        ParseSensorDataStationaryObject(objectMessage, dectMS.base(), ObjectType::TrafficSign, idStr);
+        double highestProbability = 0;
+        int highestIndex = -1;
+        for(int j = 0; j < dectMS.candidate().size(); ++j)
+        {
+            const osi3::DetectedTrafficSign_DetectedMainSign_CandidateMainSign candi = dectMS.candidate(j);
+            if(candi.probability() > highestProbability)
+            {
+                highestProbability = candi.probability();
+                highestIndex = j;
+            }
+        }
+
+        if(highestIndex > -1)
+        {
+            QString idStr = QString::number(sensorData.traffic_sign(i).header().tracking_id().value());
+            ParseSensorDataStationaryObject(objectMessage, dectMS.base(), ObjectType::TrafficSign, idStr);
+        }
+
     }
 
     for (int i = 0; i < sensorData.traffic_light_size(); ++i)
     {
         const osi3::DetectedTrafficLight& dectTL = sensorData.traffic_light(i);
-        QString idStr = QString::number(dectTL.header().tracking_id().value());
-        ParseSensorDataStationaryObject(objectMessage, dectTL.base(), ObjectType::TrafficLight, idStr);
+        double highestProbability = 0;
+        int highestIndex = -1;
+        for(int j = 0; j < dectTL.candidate().size(); ++j)
+        {
+            const osi3::DetectedTrafficLight_CandidateTrafficLight candi = dectTL.candidate(j);
+            if(candi.probability() > highestProbability)
+            {
+                highestProbability = candi.probability();
+                highestIndex = j;
+            }
+        }
+
+        if(highestIndex > -1)
+        {
+            QString idStr = QString::number(dectTL.header().tracking_id().value());
+            ParseSensorDataStationaryObject(objectMessage, dectTL.base(), ObjectType::TrafficLight, idStr);
+        }
     }
 
     for (int i = 0; i < sensorData.road_marking_size(); ++i)
     {
         const osi3::DetectedRoadMarking& dectRM = sensorData.road_marking(i);
-        QString idStr = QString::number(dectRM.header().tracking_id().value());
-        ParseSensorDataStationaryObject(objectMessage, dectRM.base(), ObjectType::OtherObject, idStr);
+        double highestProbability = 0;
+        int highestIndex = -1;
+        for(int j = 0; j < dectRM.candidate().size(); ++j)
+        {
+            const osi3::DetectedRoadMarking_CandidateRoadMarking candi = dectRM.candidate(j);
+            if(candi.probability() > highestProbability)
+            {
+                highestProbability = candi.probability();
+                highestIndex = j;
+            }
+        }
+
+        if(highestIndex > -1)
+        {
+            QString idStr = QString::number(dectRM.header().tracking_id().value());
+            ParseSensorDataStationaryObject(objectMessage, dectRM.base(), ObjectType::OtherObject, idStr);
+        }
     }
 
     // DRAW_CENTER_LINES
@@ -297,40 +343,43 @@ OsiParser::ParseSensorData(const osi3::SensorData &sensorData,
         const osi3::DetectedLane& detectL = sensorData.lane(i);
 
         int highestProbability = 0;
-        int highestProbabilityIndex = -1;
+        int highestIndex = -1;
         for(int i = 0; i < detectL.candidate_size(); ++i)
         {
             if(highestProbability < detectL.candidate(i).probability())
             {
                 highestProbability = detectL.candidate(i).probability();
-                highestProbabilityIndex = i;
+                highestIndex = i;
             }
         }
 
-        LaneStruct tmpLane;
-        tmpLane.id = detectL.header().tracking_id().value();
-
-        QVector<QVector3D> centerLines;
-        const osi3::Lane_Classification& laneC = detectL.candidate(highestProbabilityIndex).classification();
-
-        for(int c = 0; c < laneC.centerline_size(); ++c)
+        if(highestIndex > -1)
         {
-            const osi3::Vector3d& centerLine = laneC.centerline(c);
-            if(centerLine.x() != 0 || centerLine.y() != 0 || centerLine.z() != 0)
-            {
-                centerLines.append(QVector3D(centerLine.x(), 0, -centerLine.y()));
-            }
-            else if(!centerLines.empty())
-            {
-                tmpLane.centerLanes.append(centerLines);
-                centerLines.clear();
-            }
-        }
-        if(!centerLines.empty())
-            tmpLane.centerLanes.append(centerLines);
+            LaneStruct tmpLane;
+            tmpLane.id = detectL.header().tracking_id().value();
 
-        if(!tmpLane.centerLanes.empty())
-            laneMessage.append(tmpLane);
+            QVector<QVector3D> centerLines;
+            const osi3::Lane_Classification& laneC = detectL.candidate(highestIndex).classification();
+
+            for(int c = 0; c < laneC.centerline_size(); ++c)
+            {
+                const osi3::Vector3d& centerLine = laneC.centerline(c);
+                if(centerLine.x() != 0 || centerLine.y() != 0 || centerLine.z() != 0)
+                {
+                    centerLines.append(QVector3D(centerLine.x(), 0, -centerLine.y()));
+                }
+                else if(!centerLines.empty())
+                {
+                    tmpLane.centerLanes.append(centerLines);
+                    centerLines.clear();
+                }
+            }
+            if(!centerLines.empty())
+                tmpLane.centerLanes.append(centerLines);
+
+            if(!tmpLane.centerLanes.empty())
+                laneMessage.append(tmpLane);
+        }
     }
 
     // DRAW_LANE_BOUNDARIES
@@ -338,31 +387,45 @@ OsiParser::ParseSensorData(const osi3::SensorData &sensorData,
     {
         const osi3::DetectedLaneBoundary& dLaneB = sensorData.lane_boundary(i);
 
-        LaneStruct tmpLane;
-        tmpLane.id = dLaneB.header().tracking_id().value();
-
-        QVector<QVector3D> boundaryLines;
-
-        for(int b = 0; b < dLaneB.boundary_line_size(); ++b)
+        int highestProbability = 0;
+        int highestIndex = -1;
+        for(int i = 0; i < dLaneB.candidate_size(); ++i)
         {
-            const osi3::Vector3d& position = dLaneB.boundary_line(b).position();
-
-            if(position.x() != 0 || position.y() != 0 || position.z() != 0)
+            if(highestProbability < dLaneB.candidate(i).probability())
             {
-                boundaryLines.append(QVector3D(position.x(), 0, -position.y()));
-            }
-            else if(!boundaryLines.empty())
-            {
-                tmpLane.boundaryLanes.append(boundaryLines);
-                boundaryLines.clear();
+                highestProbability = dLaneB.candidate(i).probability();
+                highestIndex = i;
             }
         }
 
-        if(!boundaryLines.empty())
-            tmpLane.boundaryLanes.append(boundaryLines);
+        if(highestIndex > -1)
+        {
+            LaneStruct tmpLane;
+            tmpLane.id = dLaneB.header().tracking_id().value();
 
-        if(!tmpLane.boundaryLanes.empty())
-            laneMessage.append(tmpLane);
+            QVector<QVector3D> boundaryLines;
+
+            for(int b = 0; b < dLaneB.boundary_line_size(); ++b)
+            {
+                const osi3::Vector3d& position = dLaneB.boundary_line(b).position();
+
+                if(position.x() != 0 || position.y() != 0 || position.z() != 0)
+                {
+                    boundaryLines.append(QVector3D(position.x(), 0, -position.y()));
+                }
+                else if(!boundaryLines.empty())
+                {
+                    tmpLane.boundaryLanes.append(boundaryLines);
+                    boundaryLines.clear();
+                }
+            }
+
+            if(!boundaryLines.empty())
+                tmpLane.boundaryLanes.append(boundaryLines);
+
+            if(!tmpLane.boundaryLanes.empty())
+                laneMessage.append(tmpLane);
+        }
     }
 }
 

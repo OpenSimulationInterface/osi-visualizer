@@ -26,7 +26,7 @@ class TCPReceiver : public QObject, public IMessageSource
         signals:
             void Connected(DataType dataType);
             void Disconnected(const QString& message = "");
-            void ExportOsiMessage();
+            void UpdateSliderTime(int sliderValue);
             void MessageReceived(const osi::SensorData& sensorData,
                                  const DataType datatype);
 
@@ -39,6 +39,7 @@ class TCPReceiver : public QObject, public IMessageSource
     private:
 
         void ReceiveLoop();
+        uint64_t GetTimeStampInNanoSecond(osi::SensorData &osiSD);
 
         // socket.Connected returns always true after it has been connected once
         // (even after disconnect)
@@ -51,4 +52,6 @@ class TCPReceiver : public QObject, public IMessageSource
         zmq::socket_t socket_;
         DataType currentDataType_;
 };
+
+
 

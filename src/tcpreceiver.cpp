@@ -130,7 +130,10 @@ TCPReceiver::ReceiveLoop()
 
                 if(sensorData.ParseFromArray(message.data(),message.size()))
                 {
+                    uint64_t curStamp = GetTimeStampInNanoSecond(sensorData);
                     emit MessageReceived(sensorData, currentDataType_);
+                    int sliderValue = curStamp / 1000000;
+                    emit UpdateSliderTime(sliderValue);
                 }
                 else
                 {
@@ -149,5 +152,14 @@ TCPReceiver::ReceiveLoop()
     isThreadTerminated_ = true;
 }
 
+uint64_t
+TCPReceiver::GetTimeStampInNanoSecond(osi::SensorData& osiSD)
+{
+    uint64_t second = osiSD.mutable_ground_truth()->mutable_global_ground_truth()->timestamp().seconds();
+    int32_t nano = osiSD.mutable_ground_truth()->mutable_global_ground_truth()->timestamp().nanos();
+    uint64_t timeStamp = second * 1000000000 + nano;
+
+    return timeStamp;
+}
 
 

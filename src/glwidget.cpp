@@ -160,7 +160,8 @@ GLWidget::paintGL()
     // Afterwards the lanes, then the vehicles etc. are drawn, the texts are the last ones.
     foreach (GLObject* staticObject, staticObjects_)
     {
-        RenderObject(staticObject);
+        if(staticObject->isVisible_)
+            RenderObject(staticObject);
     }
 
     //mutex2.lock();
@@ -168,9 +169,12 @@ GLWidget::paintGL()
     {
         foreach (Lane* lane, lanes_)
         {
-            foreach (GLLaneMarking* laneMarking, lane->glLaneMarkings_)
+            if(lane->isVisible_)
             {
-                RenderObject(laneMarking);
+                foreach (GLLaneMarking* laneMarking, lane->glLaneMarkings_)
+                {
+                    RenderObject(laneMarking);
+                }
             }
         }
     }
@@ -180,11 +184,14 @@ GLWidget::paintGL()
     //mutex.lock();
     foreach (GLObject* object, simulationObjects_)
     {
-        RenderObject(object);
+        if(object->isVisible_)
+            RenderObject(object);
     }
+
     foreach (GLObject* object, simulationObjects_)
     {
-        if (object->GetTextObject()) {
+        if (object->GetTextObject() != nullptr && object->GetTextObject()->isVisible_)
+        {
             RenderObject(object->GetTextObject());
         }
     }

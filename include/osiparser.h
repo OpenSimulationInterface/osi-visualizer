@@ -21,7 +21,7 @@ class OsiParser : public QObject
     Q_OBJECT
 
     public:
-        OsiParser(const int osiMsgSaveThreshold);
+        OsiParser(const AppConfig& config);
 
         void CancelSaveOSIMessage();
 
@@ -78,7 +78,8 @@ class OsiParser : public QObject
         bool startSaveOSIMsg_;
         std::string osiMsgString_;
         int osiMsgNumber_;
-        const int osiMsgSaveThreshold_;
+
+        const AppConfig& config_;
 
 };
 

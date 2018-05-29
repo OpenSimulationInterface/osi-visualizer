@@ -77,7 +77,7 @@ DisplayObjectDialog::DisplayObjectDialog(QWidget* parent)
 
     positionX_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     positionX_->setMinimumWidth(100);
-    setMaximumSize(200, 320);
+    setMaximumSize(200, 600);
 }
 
 void

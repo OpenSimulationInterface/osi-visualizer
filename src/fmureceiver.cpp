@@ -1,5 +1,5 @@
 #include "fmureceiver.h"
-
+#include "utils.h"
 
 
 /**
@@ -52,7 +52,7 @@ FMUReceiver::FMUReceiver()
     : IMessageSource()
     , isRunning_(false)
     , isThreadTerminated_(false)
-    , currentDataType_(DataType::Groundtruth)
+    , currentDataType_(DataType::SensorView)
 {
 }
 
@@ -158,15 +158,36 @@ FMUReceiver::ReceiveLoop()
             time_t timeC = time(NULL);
             fmiStatus_ = fmi2_import_do_step(fmu_, (fmi2_real_t)timeC, hStep_, newStep);
 
-            osi3::SensorData sd;
-            if (get_fmi_sensor_data_in(sd))
+            if(currentDataType_ == DataType::SensorView)
             {
-                msgReceived = true;
-                emit MessageReceived(sd, currentDataType_);
+                osi3::SensorView sv;
+                if(get_fmi_sensor_data_in<osi3::SensorView>(sv))
+                {
+                    uint64_t curStamp = GetTimeStampInNanoSecond<osi3::SensorView>(sv);
+                    emit MessageSVReceived(sv);
+                    int sliderValue = curStamp / 1000000;
+                    emit UpdateSliderTime(sliderValue);
+                }
+                else
+                {
+                    qDebug() << "FMU SensorView receiving error";
+                }
             }
-            else
+            else //if(currentDataType_ == DataType::SensorData)
             {
-//                qDebug() << "FMU SensorData receiving error";
+                osi3::SensorData sd;
+                if (get_fmi_sensor_data_in<osi3::SensorData>(sd))
+                {
+                    msgReceived = true;
+                    uint64_t curStamp = GetTimeStampInNanoSecond<osi3::SensorData>(sd);
+                    emit MessageSDReceived(sd);
+                    int sliderValue = curStamp / 1000000;
+                    emit UpdateSliderTime(sliderValue);
+                }
+                else
+                {
+                    qDebug() << "FMU SensorData receiving error";
+                }
             }
         }
 
@@ -272,8 +293,9 @@ FMUReceiver::initializeFMU()
     return true;
 }
 
+template<typename T>
 bool
-FMUReceiver::get_fmi_sensor_data_in(osi3::SensorData& data)
+FMUReceiver::get_fmi_sensor_data_in(T& data)
 {
     fmi2_integer_t integerVars[FMI_INTEGER_OUT_VARS];
     fmiStatus_ = fmi2_import_get_integer(fmu_, vr_, FMI_INTEGER_OUT_VARS, integerVars);
@@ -287,6 +309,5 @@ FMUReceiver::get_fmi_sensor_data_in(osi3::SensorData& data)
 
     return false;
 }
-
 
 

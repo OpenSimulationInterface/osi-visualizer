@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.1)
 add_subdirectory(open-simulation-interface)
+add_subdirectory(osi-sensor-model-packaging/examples)
 project(osi-visualizer)
 
 set(CMAKE_CXX_STANDARD 11)
@@ -33,6 +34,7 @@ set(SOURCES
     src/osiparser.cpp
     src/glfieldofview.cpp
     src/fmureceiver.cpp
+    src/utils.cpp
 )
 
 set(HEADERS
@@ -59,6 +61,7 @@ set(HEADERS
     include/osiparser.h
     include/glfieldofview.h
     include/fmureceiver.h
+    include/utils.h
 )
 
 

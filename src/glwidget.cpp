@@ -26,7 +26,7 @@ GLWidget::GLWidget(QWidget* parent,
     , uniformMvpLocation_(0)
     , uniformColorLocation_(0)
     , uniformUseTextureLocation_(0)
-    , currentDataType_(DataType::Groundtruth)
+    , currentDataType_(DataType::SensorView)
     , camera_(nullptr)
     , mousePos_()
     , config_(config)

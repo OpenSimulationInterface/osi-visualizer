@@ -50,8 +50,9 @@ class FMUReceiver: public QObject, public IMessageSource
         signals:
             void Connected(DataType dataType);
             void Disconnected(const QString& message = "");
-            void MessageReceived(const osi3::SensorData& sensorData,
-                                 const DataType datatype);
+            void UpdateSliderTime(int sliderValue);
+            void MessageSDReceived(const osi3::SensorData& sd);
+            void MessageSVReceived(const osi3::SensorView& sv);
 
     public slots:
             void DisconnectRequested();
@@ -63,7 +64,6 @@ class FMUReceiver: public QObject, public IMessageSource
     private:
 
         void ReceiveLoop();
-
 
         bool isRunning_;
         bool isThreadTerminated_;
@@ -104,7 +104,7 @@ class FMUReceiver: public QObject, public IMessageSource
         // setup and initialize FMU
         bool initializeFMU();
         // protobuf accessors
-        bool get_fmi_sensor_data_in(osi3::SensorData& data);
+        template<typename T> bool get_fmi_sensor_data_in(T& data);
 };
 
 

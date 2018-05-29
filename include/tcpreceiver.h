@@ -27,8 +27,8 @@ class TCPReceiver : public QObject, public IMessageSource
             void Connected(DataType dataType);
             void Disconnected(const QString& message = "");
             void UpdateSliderTime(int sliderValue);
-            void MessageReceived(const osi3::SensorData& sensorData,
-                                 const DataType datatype);
+            void MessageSDReceived(const osi3::SensorData& sd);
+            void MessageSVReceived(const osi3::SensorView& sv);
 
     public slots:
         void DisconnectRequested();
@@ -39,10 +39,7 @@ class TCPReceiver : public QObject, public IMessageSource
     private:
 
         void ReceiveLoop();
-        uint64_t GetTimeStampInNanoSecond(osi3::SensorData &osiSD);
 
-        // socket.Connected returns always true after it has been connected once
-        // (even after disconnect)
         bool isRunning_;
         bool isThreadTerminated_;
 

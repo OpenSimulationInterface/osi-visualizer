@@ -34,8 +34,35 @@ OsiParser::CancelSaveOSIMessage()
 }
 
 void
-OsiParser::ParseReceivedMessage(const osi3::SensorData& sensorData,
-                                const DataType datatype)
+OsiParser::ParseReceivedSDMessage(const osi3::SensorData& sd)
+{
+    LocalMonitor<osi3::SensorData>(sd);
+
+    Message objectMessage;
+    LaneMessage laneMessage;
+
+    ParseSensorData(sd, objectMessage, laneMessage);
+
+    emit MessageParsed(objectMessage, laneMessage);
+}
+
+void
+OsiParser::ParseReceivedSVMessage(const osi3::SensorView& sv)
+{
+    LocalMonitor<osi3::SensorView>(sv);
+
+    Message objectMessage;
+    LaneMessage laneMessage;
+
+    const osi3::GroundTruth& groundTruth = sv.global_ground_truth();
+    ParseGroundtruth(groundTruth, objectMessage, laneMessage);
+
+    emit MessageParsed(objectMessage, laneMessage);
+}
+
+template <typename T>
+void
+OsiParser::LocalMonitor(const T& data)
 {
     if (isFirstMessage_)
     {
@@ -46,31 +73,13 @@ OsiParser::ParseReceivedMessage(const osi3::SensorData& sensorData,
     {
         ++osiMsgNumber_;
 
-        osiMsgString_ += sensorData.SerializeAsString();
+        osiMsgString_ += data.SerializeAsString();
         osiMsgString_ += "$$__$$";
     }
     else if(osiMsgNumber_ >= config_.osiMsgSaveThreshold_)
     {
         emit SaveOSIMsgOverflow(config_.osiMsgSaveThreshold_);
     }
-
-    Message objectMessage;
-    LaneMessage laneMessage;
-
-    if (datatype == DataType::Groundtruth)
-    {
-        if(sensorData.sensor_view_size() > 0)
-        {
-            const osi3::GroundTruth& groundTruth = sensorData.sensor_view(0).global_ground_truth();
-            ParseGroundtruth(groundTruth, objectMessage, laneMessage);
-        }
-    }
-    else if (datatype == DataType::SensorData)
-    {
-        ParseSensorData(sensorData, objectMessage, laneMessage);
-    }
-
-    emit MessageParsed(objectMessage, laneMessage);
 }
 
 //Parse Ground Truth Data

@@ -769,11 +769,15 @@ MainWindow::ConnectSignalsToSlots()
     connect(fmuReceiver_, &FMUReceiver::Connected, glWidget_, &GLWidget::Connected, Qt::DirectConnection);
     connect(fmuReceiver_, &FMUReceiver::Disconnected, glWidget_, &GLWidget::Disconnected, Qt::DirectConnection);
 
+    connect(fmuReceiver_, &FMUReceiver::UpdateSliderTime, this, &MainWindow::UpdateSliderTime);
+
     connect(this, &MainWindow::FMUConnectRequested2, fmuReceiver2_, &FMUReceiver::ConnectRequested, Qt::QueuedConnection);
     connect(fmuReceiver2_, &FMUReceiver::Connected, this, &MainWindow::Connected2);
     connect(fmuReceiver2_, &FMUReceiver::Disconnected, this, &MainWindow::Disconnected2);
     connect(fmuReceiver2_, &FMUReceiver::Connected, glWidget2_, &GLWidget::Connected, Qt::DirectConnection);
     connect(fmuReceiver2_, &FMUReceiver::Disconnected, glWidget2_, &GLWidget::Disconnected, Qt::DirectConnection);
+
+    connect(fmuReceiver2_, &FMUReceiver::UpdateSliderTime, this, &MainWindow::UpdateSliderTime2);
 
     connect(this, &MainWindow::StartPlaybackRequested, reader_, &OsiReader::StartReadFile, Qt::QueuedConnection);
     connect(reader_, &OsiReader::Connected, this, &MainWindow::Connected);
@@ -794,14 +798,20 @@ MainWindow::ConnectSignalsToSlots()
     connect(reader2_, &OsiReader::UpdateSliderValue, this, &MainWindow::UpdateSliderValue2);
 
     //Main loop: receive(read) -> parse -> update objects
-    connect(tcpReceiver_, &TCPReceiver::MessageReceived, osiparser_, &OsiParser::ParseReceivedMessage, Qt::QueuedConnection);
-    connect(tcpReceiver2_, &TCPReceiver::MessageReceived, osiparser2_, &OsiParser::ParseReceivedMessage, Qt::QueuedConnection);
+    connect(tcpReceiver_, &TCPReceiver::MessageSDReceived, osiparser_, &OsiParser::ParseReceivedSDMessage, Qt::QueuedConnection);
+    connect(tcpReceiver_, &TCPReceiver::MessageSVReceived, osiparser_, &OsiParser::ParseReceivedSVMessage, Qt::QueuedConnection);
+    connect(tcpReceiver2_, &TCPReceiver::MessageSDReceived, osiparser2_, &OsiParser::ParseReceivedSDMessage, Qt::QueuedConnection);
+    connect(tcpReceiver2_, &TCPReceiver::MessageSVReceived, osiparser2_, &OsiParser::ParseReceivedSVMessage, Qt::QueuedConnection);
 
-    connect(fmuReceiver_, &FMUReceiver::MessageReceived, osiparser_, &OsiParser::ParseReceivedMessage, Qt::QueuedConnection);
-    connect(fmuReceiver2_, &FMUReceiver::MessageReceived, osiparser2_, &OsiParser::ParseReceivedMessage, Qt::QueuedConnection);
+    connect(fmuReceiver_, &FMUReceiver::MessageSDReceived, osiparser_, &OsiParser::ParseReceivedSDMessage, Qt::QueuedConnection);
+    connect(fmuReceiver_, &FMUReceiver::MessageSVReceived, osiparser_, &OsiParser::ParseReceivedSVMessage, Qt::QueuedConnection);
+    connect(fmuReceiver2_, &FMUReceiver::MessageSDReceived, osiparser2_, &OsiParser::ParseReceivedSDMessage, Qt::QueuedConnection);
+    connect(fmuReceiver2_, &FMUReceiver::MessageSVReceived, osiparser2_, &OsiParser::ParseReceivedSVMessage, Qt::QueuedConnection);
 
-    connect(reader_, &OsiReader::MessageSendout, osiparser_, &OsiParser::ParseReceivedMessage, Qt::QueuedConnection);
-    connect(reader2_, &OsiReader::MessageSendout, osiparser2_, &OsiParser::ParseReceivedMessage, Qt::QueuedConnection);
+    connect(reader_, &OsiReader::MessageSDSendout, osiparser_, &OsiParser::ParseReceivedSDMessage, Qt::QueuedConnection);
+    connect(reader_, &OsiReader::MessageSVSendout, osiparser_, &OsiParser::ParseReceivedSVMessage, Qt::QueuedConnection);
+    connect(reader2_, &OsiReader::MessageSDSendout, osiparser2_, &OsiParser::ParseReceivedSDMessage, Qt::QueuedConnection);
+    connect(reader2_, &OsiReader::MessageSVSendout, osiparser2_, &OsiParser::ParseReceivedSVMessage, Qt::QueuedConnection);
 
     connect(osiparser_, &OsiParser::MessageParsed, glWidget_, &GLWidget::MessageParsed, Qt::QueuedConnection);
     connect(osiparser2_, &OsiParser::MessageParsed, glWidget2_, &GLWidget::MessageParsed, Qt::QueuedConnection);
@@ -1416,14 +1426,14 @@ MainWindow::InitLoadConfigure()
 void
 MainWindow::InitComboBoxes()
 {
-    ui_->dataType->addItem("GroundTruth");
+    ui_->dataType->addItem("SensorView");
     ui_->dataType->addItem("SensorData");
-    ui_->dataType_2->addItem("GroundTruth");
+    ui_->dataType_2->addItem("SensorView");
     ui_->dataType_2->addItem("SensorData");
 
-    ui_->playbackDataType->addItem("GroundTruth");
+    ui_->playbackDataType->addItem("SensorView");
     ui_->playbackDataType->addItem("SensorData");
-    ui_->playbackDataType_2->addItem("GroundTruth");
+    ui_->playbackDataType_2->addItem("SensorView");
     ui_->playbackDataType_2->addItem("SensorData");
 }
 

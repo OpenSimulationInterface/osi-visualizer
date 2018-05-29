@@ -17,7 +17,7 @@
 
 enum class DataType: int
 {
-    Groundtruth = 0,
+    SensorView = 0,
     SensorData
 };
 

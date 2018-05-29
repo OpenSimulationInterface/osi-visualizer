@@ -33,10 +33,12 @@ class OsiParser : public QObject
 
     public slots:
         void ExportOsiMessage();
-        void ParseReceivedMessage(const osi3::SensorData& SensorData,
-                                  const DataType datatype);
+        void ParseReceivedSDMessage(const osi3::SensorData& sd);
+        void ParseReceivedSVMessage(const osi3::SensorView& sv);
 
     private:
+
+        template <typename T> void LocalMonitor(const T& data);
 
         void ParseGroundtruth(const osi3::GroundTruth& groundTruth,
                               Message& objectMessage,

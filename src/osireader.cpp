@@ -7,6 +7,7 @@
 #include <iostream>
 
 #include "osireader.h"
+#include "utils.h"
 /**
 *  local functions
 */
@@ -105,6 +106,7 @@ void
 OsiReader::StartReadFile(const QString& osiFileName, const DataType dataType, const QString& fmuPath)
 {
     zmqPublisher_.close();
+    currentDataType_ = dataType;
     FMUPath_ = fmuPath.toStdString();
     QString errMsg = SetupConnection(true);
     bool success = errMsg.isEmpty();
@@ -143,13 +145,12 @@ OsiReader::StartReadFile(const QString& osiFileName, const DataType dataType, co
                 iterStamp_ = stamp2Offset_.begin();
 
                 isConnected_ = true;
-                emit Connected(defaultDatatype_);
+                emit Connected(currentDataType_);
 
                 // update slider range in millisecond level
                 int sliderRange = (stamp2Offset_.crbegin()->first)/1000000;
                 emit UpdateSliderRange(sliderRange);
 
-                defaultDatatype_ = dataType;
                 QtConcurrent::run(this, &OsiReader::SendMessageLoop);
             }
         }
@@ -235,31 +236,40 @@ OsiReader::SliderValueChanged(int newValue)
                 continue;
             }
 
-            osi3::SensorData osiSD;
-            if(osiSD.ParseFromString(str_line))
+            if(currentDataType_ == DataType::SensorView)
             {
-                uint64_t curStamp = GetTimeStampInNanoSecond(osiSD);
-                emit MessageSendout(osiSD, defaultDatatype_);
-                SendOutMessage(str_line);
-                // update slider value in millisecond level
-                int sliderValue = (curStamp - firstTimeStamp_) / 1000000;
-                emit UpdateSliderValue(sliderValue);
-                break;
+                osi3::SensorView sv;
+                if(sv.ParseFromString(str_line))
+                {
+                    uint64_t curStamp = ::GetTimeStampInNanoSecond<osi3::SensorView>(sv);
+                    emit MessageSVSendout(sv);
+                    SendOutMessage(str_line);
+                    // update slider value in millisecond level
+                    int sliderValue = (curStamp - firstTimeStamp_) / 1000000;
+                    emit UpdateSliderValue(sliderValue);
+                    break;
+                }
             }
+            else //if(currentDataType_ == DataType::SensorData)
+            {
+                osi3::SensorData sd;
+                if(sd.ParseFromString(str_line))
+                {
+                    uint64_t curStamp = ::GetTimeStampInNanoSecond<osi3::SensorData>(sd);
+                    emit MessageSDSendout(sd);
+                    SendOutMessage(str_line);
+                    // update slider value in millisecond level
+                    int sliderValue = (curStamp - firstTimeStamp_) / 1000000;
+                    emit UpdateSliderValue(sliderValue);
+                    break;
+                }
+            }
+
+
         }
 
         inputFile.close();
     }
-}
-
-uint64_t
-OsiReader::GetTimeStampInNanoSecond(osi3::SensorData& osiSD)
-{
-    uint64_t second = osiSD.timestamp().seconds();
-    int32_t nano = osiSD.timestamp().nanos();
-    uint64_t timeStamp = second * 1000000000 + nano;
-
-    return timeStamp;
 }
 
 void
@@ -299,9 +309,9 @@ OsiReader::CreateHeader(QString& errorMsg)
     std::streampos beginPos = inputFile.tellg();
     std::streamoff offset (0);
     bool isFirstMsg (true);
-    double_t firstTimeStamp (0);
+    double firstTimeStamp (0);
 
-    while(getline (inputFile, str_line_input))
+    while(getline (inputFile, str_line_input) && success)
     {
         if(str_backup != "")
         {
@@ -319,22 +329,10 @@ OsiReader::CreateHeader(QString& errorMsg)
             continue;
         }
 
-        osi3::SensorData osiSD;
-        if(osiSD.ParseFromString(str_line))
-        {
-            if(isFirstMsg)
-            {
-                isFirstMsg = false;
-                firstTimeStamp = GetTimeStampInNanoSecond(osiSD);
-            }
-
-            uint64_t timeStamp = GetTimeStampInNanoSecond(osiSD);
-            stamp2Offset_.push_back(std::make_pair(timeStamp - firstTimeStamp, offset));
-        }
-        else
-        {
-            success = false;
-        }
+        if(currentDataType_ == DataType::SensorView)
+            success = BuildUpStamps<osi3::SensorView>(isFirstMsg, firstTimeStamp, str_line, offset);
+        else //if(currentDataType_ == DataType::SensorData)
+            success = BuildUpStamps<osi3::SensorData>(isFirstMsg, firstTimeStamp, str_line, offset);
 
         offset = inputFile.tellg() - beginPos - str_backup.size();
         str_line = "";
@@ -351,6 +349,35 @@ OsiReader::CreateHeader(QString& errorMsg)
     }
 
     inputFile.close();
+
+    return success;
+}
+
+template <typename T>
+bool
+OsiReader::BuildUpStamps(bool& isFirstMsg,
+                         double& firstTimeStamp,
+                         const std::string& message,
+                         const std::streamoff& offset)
+{
+    bool success (true);
+
+    T data;
+    if(data.ParseFromString(message))
+    {
+        if(isFirstMsg)
+        {
+            isFirstMsg = false;
+            firstTimeStamp = GetTimeStampInNanoSecond<T>(data);
+        }
+
+        uint64_t timeStamp = GetTimeStampInNanoSecond<T>(data);
+        stamp2Offset_.push_back(std::make_pair(timeStamp - firstTimeStamp, offset));
+    }
+    else
+    {
+        success = false;
+    }
 
     return success;
 }
@@ -412,44 +439,21 @@ OsiReader::SendMessageLoop()
                     continue;
                 }
 
-                osi3::SensorData osiSD;
-                if(osiSD.ParseFromString(str_line))
+                bool sendSuccess(true);
+                if(currentDataType_ == DataType::SensorView)
                 {
-                    uint64_t curStamp = GetTimeStampInNanoSecond(osiSD);
-
-                    if(isFirstMessage)
-                    {
-                        firstTimeStamp_ = curStamp;
-                        isFirstMessage = false;
-                    }
-
-                    if(isRefreshMessage)
-                    {
-                        preTimeStamp = curStamp;
-                        isRefreshMessage = false;
-                    }
-
-                    int64_t sleep = curStamp - preTimeStamp;
-                    if(sleep < 0)
-                        sleep = 0;
-
-                    sleep /= 1000;
-                    sleep += *deltaDelay_ * 1000;
-
-                    usleep(sleep);
-                    preTimeStamp = curStamp;
-
-                    emit MessageSendout(osiSD, defaultDatatype_);
-                    SendOutMessage(str_line);
-                    // update slider value in millisecond level
-                    int sliderValue = (curStamp - firstTimeStamp_) / 1000000;
-                    emit UpdateSliderValue(sliderValue);
-
-                    ++iterStamp_;
-                    if(iterStamp_ == stamp2Offset_.end())
-                        iterStamp_ = stamp2Offset_.begin();
+                    osi3::SensorView sv;
+                    sendSuccess = SendMessage<osi3::SensorView>(sv, isFirstMessage, isRefreshMessage, preTimeStamp, str_line);
+                    MessageSVSendout(sv);
                 }
-                else
+                else //if(currentDataType_ == DataType::SensorData)
+                {
+                    osi3::SensorData sd;
+                    sendSuccess = SendMessage<osi3::SensorData>(sd, isFirstMessage, isRefreshMessage, preTimeStamp, str_line);
+                    MessageSDSendout(sd);
+                }
+
+                if(!sendSuccess)
                 {
                     // should never come here: error - osi parse wrong
                     isRunning_ = false;
@@ -481,6 +485,57 @@ OsiReader::SendMessageLoop()
     inputFile.close();
 
     isReadTerminated_ = true;
+}
+
+template <typename T>
+bool
+OsiReader::SendMessage(T& data,
+                       bool& isFirstMessage,
+                       bool& isRefreshMessage,
+                       uint64_t& preTimeStamp,
+                       const std::string& message)
+{
+    bool success (false);
+
+    if(data.ParseFromString(message))
+    {
+        uint64_t curStamp = GetTimeStampInNanoSecond<T>(data);
+
+        if(isFirstMessage)
+        {
+            firstTimeStamp_ = curStamp;
+            isFirstMessage = false;
+        }
+
+        if(isRefreshMessage)
+        {
+            preTimeStamp = curStamp;
+            isRefreshMessage = false;
+        }
+
+        int64_t sleep = curStamp - preTimeStamp;
+        if(sleep < 0)
+            sleep = 0;
+
+        sleep /= 1000;
+        sleep += *deltaDelay_ * 1000;
+
+        usleep(sleep);
+        preTimeStamp = curStamp;
+
+        SendOutMessage(message);
+        // update slider value in millisecond level
+        int sliderValue = (curStamp - firstTimeStamp_) / 1000000;
+        emit UpdateSliderValue(sliderValue);
+
+        ++iterStamp_;
+        if(iterStamp_ == stamp2Offset_.end())
+            iterStamp_ = stamp2Offset_.begin();
+
+        success = true;
+    }
+
+    return success;
 }
 
 void

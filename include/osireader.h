@@ -67,8 +67,8 @@ class OsiReader: public QObject, public IMessageSource
             void UpdateSliderRange(int sliderRange);
             void UpdateSliderValue(int sliderValue);
             void Disconnected(const QString& message = "");
-            void MessageSendout(const osi3::SensorData& SensorData,
-                                const DataType datatype);
+            void MessageSDSendout(const osi3::SensorData& SensorData);
+            void MessageSVSendout(const osi3::SensorView& SensorView);
 
     public slots:
             void StartReadFile(const QString& osiFileName,
@@ -79,13 +79,22 @@ class OsiReader: public QObject, public IMessageSource
 
     private:
 
-        uint64_t GetTimeStampInNanoSecond(osi3::SensorData &osiSD);
-
         void ReadHeader();
         bool CreateHeader(QString& errorMsg);
+        template <typename T> bool BuildUpStamps(bool& isFirstMsg,
+                                                 double& firstTimeStamp,
+                                                 const std::string& message,
+                                                 const std::streamoff& offset);
+
         void SaveHeader();
 
         void SendMessageLoop();
+        template <typename T> bool SendMessage(T& data,
+                                               bool& isFirstMessage,
+                                               bool& isRefreshMessage,
+                                               uint64_t& preTimeStamp,
+                                               const std::string& message);
+
         void SendOutMessage(const std::string& message);
 
         QString SetZMQConnection();
@@ -152,7 +161,7 @@ class OsiReader: public QObject, public IMessageSource
 
 
         // read from input file: data type is always SensorData
-        DataType defaultDatatype_ = DataType::Groundtruth;
+        DataType currentDataType_ = DataType::SensorView;
         const QString defaultHeaderPrifix_ = "Header_";
 };
 

@@ -444,13 +444,15 @@ OsiReader::SendMessageLoop()
                 {
                     osi3::SensorView sv;
                     sendSuccess = SendMessage<osi3::SensorView>(sv, isFirstMessage, isRefreshMessage, preTimeStamp, str_line);
-                    MessageSVSendout(sv);
+                    if(sendSuccess)
+                        MessageSVSendout(sv);
                 }
                 else //if(currentDataType_ == DataType::SensorData)
                 {
                     osi3::SensorData sd;
                     sendSuccess = SendMessage<osi3::SensorData>(sd, isFirstMessage, isRefreshMessage, preTimeStamp, str_line);
-                    MessageSDSendout(sd);
+                    if(sendSuccess)
+                        MessageSDSendout(sd);
                 }
 
                 if(!sendSuccess)

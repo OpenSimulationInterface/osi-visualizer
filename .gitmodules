@@ -1,3 +1,7 @@
 [submodule "open-simulation-interface"]
 	path = open-simulation-interface
 	url = https://github.com/OpenSimulationInterface/open-simulation-interface.git
+
+[submodule "osi-sensor-model-packaging"]
+	path = osi-sensor-model-packaging
+	url = https://github.com/OpenSimulationInterface/osi-sensor-model-packaging.git

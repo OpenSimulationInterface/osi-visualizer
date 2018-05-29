@@ -2,6 +2,7 @@
 #include "ui_mainwindow.h"
 #include "customtreewidgetitem.h"
 #include "tcpreceiver.h"
+#include "fmureceiver.h"
 #include "glwidget.h"
 #include "global.h"
 #include "osiparser.h"
@@ -46,14 +47,16 @@ MainWindow::MainWindow(QWidget *parent)
     , ui_(new Ui::MainWindow)
 
     , glWidget_(nullptr)
-    , receiver_(new TCPReceiver())
-    , reader_(new OsiReader(&config_.ch1DeltaDelay_, config_.ch1EnableSendOut_, config_.ch1SendOutPortNum_.toStdString()))
-    , osiparser_(new OsiParser(config_.osiMsgSaveThreshold_))
+    , tcpReceiver_(new TCPReceiver())
+    , fmuReceiver_(new FMUReceiver())
+    , reader_(new OsiReader(&config_.ch1DeltaDelay_, config_.ch1EnableSendOut_, config_.ch1SendOutPortNum_.toStdString(), config_.ch1FMUTxCheck_, config_.ch1LoadFMUTx_.toStdString()))
+    , osiparser_(new OsiParser(config_))
 
     , glWidget2_(nullptr)
-    , receiver2_(new TCPReceiver())
-    , reader2_(new OsiReader(&config_.ch2DeltaDelay_, config_.ch2EnableSendOut_, config_.ch2SendOutPortNum_.toStdString()))
-    , osiparser2_(new OsiParser(config_.osiMsgSaveThreshold_))
+    , tcpReceiver2_(new TCPReceiver())
+    , fmuReceiver2_(new FMUReceiver())
+    , reader2_(new OsiReader(&config_.ch2DeltaDelay_, config_.ch2EnableSendOut_, config_.ch2SendOutPortNum_.toStdString(), config_.ch2FMUTxCheck_, config_.ch2LoadFMUTx_.toStdString()))
+    , osiparser2_(new OsiParser(config_))
 
     , colorWidgets_()
     , treeNodes_()
@@ -66,26 +69,21 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui_->setupUi(this);
 
-    QPixmap logo(config_.srcPath_ + "Resources/Images/BMW_Logo.png");
-    ui_->logoLabel->setPixmap(logo);
+//    QPixmap logo(config_.srcPath_ + "Resources/Images/BMW_Logo.png");
+//    ui_->logoLabel->setPixmap(logo);
 
     InitObjectTree();
     InitObjectTree2();
     ui_->objectTree->header()->setSortIndicator(0, Qt::AscendingOrder);
     ui_->objectTree_2->header()->setSortIndicator(0, Qt::AscendingOrder);
 
-    glWidget_ = new GLWidget(this, receiver_, treeNodes_, config_);
+    glWidget_ = new GLWidget(this, tcpReceiver_, treeNodes_, config_);
     ui_->glLayout->addWidget(glWidget_);
     glWidget_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
-    glWidget2_ = new GLWidget(this, receiver2_, treeNodes2_, config_);
+    glWidget2_ = new GLWidget(this, tcpReceiver2_, treeNodes2_, config_);
     ui_->glLayout_2->addWidget(glWidget2_);
     glWidget2_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-
-    ConnectSignalsToSlots();
-    InitComboBoxes();
-    InitLaneTypeMenu();
-    InitLoadConfigure();
 
     QSurfaceFormat format;
     format.setDepthBufferSize(24);
@@ -95,6 +93,15 @@ MainWindow::MainWindow(QWidget *parent)
     glWidget_->setFormat(format);
     glWidget2_->setFormat(format);
 
+    ui_->saveOSIMessage->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    ui_->saveOSIMessage->setIcon(playIcon_);
+    ui_->saveOSIMessage_2->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    ui_->saveOSIMessage_2->setIcon(playIcon_);
+
+    ConnectSignalsToSlots();
+    InitComboBoxes();
+    InitLaneTypeMenu();
+    InitLoadConfigure();
     InitLegendGroupBox();
     ToggleSrcGroups();
     ToggleSrcGroups2();
@@ -102,13 +109,19 @@ MainWindow::MainWindow(QWidget *parent)
     TogglePlayPauseButton2();
     EnableSlider(false);
     EnableSlider2(false);
-
-    ui_->saveOSIMessage->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-    ui_->saveOSIMessage->setIcon(playIcon_);
-    ui_->saveOSIMessage_2->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-    ui_->saveOSIMessage_2->setIcon(playIcon_);
+    UpdateGLWidgetMessageSource();
+    UpdateGLWidgetMessageSource2();
 
     QTimer::singleShot(1000, this, SLOT(showMaximized()));
+}
+
+void
+MainWindow::LocalUpdate()
+{
+    ShowFOV();
+    ShowFOV2();
+    ToggleShowFOV();
+    ToggleShowFOV2();
 }
 
 MainWindow::~MainWindow()
@@ -118,8 +131,10 @@ MainWindow::~MainWindow()
     delete glWidget2_;
     delete osiparser_;
     delete osiparser2_;
-    delete receiver_;
-    delete receiver2_;
+    delete tcpReceiver_;
+    delete fmuReceiver_;
+    delete tcpReceiver2_;
+    delete fmuReceiver2_;
     delete reader_;
     delete reader2_;
     delete ui_;
@@ -131,6 +146,7 @@ MainWindow::RBConnection()
     isSrcConnection_ = true;
     UpdateGLWidgetMessageSource();
     ToggleSrcGroups();
+    ToggleShowFOV();
 }
 
 void
@@ -139,6 +155,7 @@ MainWindow::RBConnection2()
     isSrcConnection2_ = true;
     UpdateGLWidgetMessageSource2();
     ToggleSrcGroups2();
+    ToggleShowFOV2();
 }
 
 void
@@ -147,6 +164,7 @@ MainWindow::RBPlayback()
     isSrcConnection_ = false;
     UpdateGLWidgetMessageSource();
     ToggleSrcGroups();
+    ToggleShowFOV();
 }
 
 void
@@ -155,11 +173,221 @@ MainWindow::RBPlayback2()
     isSrcConnection2_ = false;
     UpdateGLWidgetMessageSource2();
     ToggleSrcGroups2();
+    ToggleShowFOV2();
+}
+
+void
+MainWindow::CBDataTypeCon(int index)
+{
+    if(index == 1)
+    {
+        ui_->showFOV->setEnabled(true);
+        glWidget_->UpdateFOVPaint(ui_->showFOV->isChecked());
+        EnableShowFOV(!ui_->showFOV->isChecked());
+    }
+    else
+    {
+        ui_->showFOV->setEnabled(false);
+        glWidget_->UpdateFOVPaint(false);
+        EnableShowFOV(false);
+    }
+}
+
+void
+MainWindow::CBDataTypePlay(int index)
+{
+    if(index == 1)
+    {
+        ui_->showFOV->setEnabled(true);
+        glWidget_->UpdateFOVPaint(ui_->showFOV->isChecked());
+        EnableShowFOV(!ui_->showFOV->isChecked());
+    }
+    else
+    {
+        ui_->showFOV->setEnabled(false);
+        glWidget_->UpdateFOVPaint(false);
+        EnableShowFOV(false);
+    }
+}
+
+void
+MainWindow::CBDataTypeCon2(int index)
+{
+    if(index == 1)
+    {
+        ui_->showFOV_2->setEnabled(true);
+        glWidget2_->UpdateFOVPaint(ui_->showFOV_2->isChecked());
+        EnableShowFOV2(!ui_->showFOV_2->isChecked());
+    }
+    else
+    {
+        ui_->showFOV_2->setEnabled(false);
+        glWidget2_->UpdateFOVPaint(false);
+        EnableShowFOV2(false);
+    }
+}
+
+void
+MainWindow::CBDataTypePlay2(int index)
+{
+    if(index == 1)
+    {
+        ui_->showFOV_2->setEnabled(true);
+        glWidget2_->UpdateFOVPaint(ui_->showFOV_2->isChecked());
+        EnableShowFOV2(!ui_->showFOV_2->isChecked());
+    }
+    else
+    {
+        ui_->showFOV_2->setEnabled(false);
+        glWidget2_->UpdateFOVPaint(false);
+        EnableShowFOV2(false);
+    }
+}
+
+void
+MainWindow::ToggleShowFOV()
+{
+    if(isSrcConnection_)
+        CBDataTypeCon(ui_->dataType->currentIndex());
+    else
+        CBDataTypePlay(ui_->playbackDataType->currentIndex());
+}
+
+void
+MainWindow::ToggleShowFOV2()
+{
+    if(isSrcConnection2_)
+        CBDataTypeCon2(ui_->dataType_2->currentIndex());
+    else
+        CBDataTypePlay2(ui_->playbackDataType_2->currentIndex());
+}
+
+void
+MainWindow::CheckBoxFMURx()
+{
+    bool enableFmu = ui_->checkBoxFMURx->isChecked();
+    ui_->loadFMURx->setEnabled(enableFmu);
+    ui_->loadFMURxBrowse->setEnabled(enableFmu);
+    UpdateGLWidgetMessageSource();
+}
+
+void
+MainWindow::CheckBoxFMURx2()
+{
+    bool enableFmu = ui_->checkBoxFMURx_2->isChecked();
+    ui_->loadFMURx_2->setEnabled(enableFmu);
+    ui_->loadFMURxBrowse_2->setEnabled(enableFmu);
+    UpdateGLWidgetMessageSource2();
+}
+
+void
+MainWindow::LoadFMURxEdited(const QString& text)
+{
+    ui_->loadFMURx->setText(text);
+    ui_->loadFMURx->setToolTip(text);
+}
+
+void
+MainWindow::LoadFMURxBrowse()
+{
+    QString fileName = ui_->loadFMURx->text();
+
+    fileName = QFileDialog::getOpenFileName(this,
+        tr("Load file"), fileName, tr("FMU Files (*.fmu)"));
+
+    if(!fileName.isEmpty())
+    {
+        ui_->loadFMURx->setText(fileName);
+        ui_->loadFMURx->setToolTip(fileName);
+    }
+}
+
+void
+MainWindow::LoadFMURxEdited2(const QString& text)
+{
+    ui_->loadFMURx_2->setText(text);
+    ui_->loadFMURx_2->setToolTip(text);
+}
+
+void
+MainWindow::LoadFMURxBrowse2()
+{
+    QString fileName = ui_->loadFMURx_2->text();
+
+    fileName = QFileDialog::getOpenFileName(this,
+        tr("Load file"), fileName, tr("FMU Files (*.fmu)"));
+
+    if(!fileName.isEmpty())
+    {
+        ui_->loadFMURx_2->setText(fileName);
+        ui_->loadFMURx_2->setToolTip(fileName);
+    }
+}
+
+void
+MainWindow::CheckBoxFMUTx()
+{
+    bool enableFmu = ui_->checkBoxFMUTx->isChecked();
+    ui_->loadFMUTx->setEnabled(enableFmu);
+    ui_->loadFMUTxBrowse->setEnabled(enableFmu);
+}
+
+void
+MainWindow::CheckBoxFMUTx2()
+{
+    bool enableFmu = ui_->checkBoxFMUTx_2->isChecked();
+    ui_->loadFMUTx_2->setEnabled(enableFmu);
+    ui_->loadFMUTxBrowse_2->setEnabled(enableFmu);
+}
+
+void
+MainWindow::LoadFMUTxEdited(const QString& text)
+{
+    ui_->loadFMUTx->setText(text);
+    ui_->loadFMUTx->setToolTip(text);
+}
+
+void
+MainWindow::LoadFMUTxBrowse()
+{
+    QString fileName = ui_->loadFMUTx->text();
+
+    fileName = QFileDialog::getOpenFileName(this,
+        tr("Load file"), fileName, tr("FMU Files (*.fmu)"));
+
+    if(!fileName.isEmpty())
+    {
+        ui_->loadFMUTx->setText(fileName);
+        ui_->loadFMUTx->setToolTip(fileName);
+    }
+}
+
+void
+MainWindow::LoadFMUTxEdited2(const QString& text)
+{
+    ui_->loadFMUTx_2->setText(text);
+    ui_->loadFMUTx_2->setToolTip(text);
+}
+
+void
+MainWindow::LoadFMUTxBrowse2()
+{
+    QString fileName = ui_->loadFMUTx_2->text();
+
+    fileName = QFileDialog::getOpenFileName(this,
+        tr("Load file"), fileName, tr("FMU Files (*.fmu)"));
+
+    if(!fileName.isEmpty())
+    {
+        ui_->loadFMUTx_2->setText(fileName);
+        ui_->loadFMUTx_2->setToolTip(fileName);
+    }
 }
 
 void
 MainWindow::LoadFileEdited(const QString& text)
 {
+    ui_->loadFile->setText(text);
     ui_->loadFile->setToolTip(text);
 }
 
@@ -181,6 +409,7 @@ MainWindow::LoadFileBrowse()
 void
 MainWindow::LoadFileEdited2(const QString& text)
 {
+    ui_->loadFile_2->setText(text);
     ui_->loadFile_2->setToolTip(text);
 }
 
@@ -202,13 +431,23 @@ MainWindow::LoadFileBrowse2()
 void
 MainWindow::EnableSendToNetwork()
 {
-    ui_->sendOutPortNum->setEnabled(ui_->enableSendToNetwork->checkState() == Qt::Checked);
+    bool enableSend = ui_->enableSendToNetwork->checkState() == Qt::Checked;
+    ui_->sendOutPortNum->setEnabled(enableSend);
+    bool enableFMU = ui_->checkBoxFMUTx->checkState() == Qt::Checked;
+    ui_->checkBoxFMUTx->setEnabled(enableSend);
+    ui_->loadFMUTx->setEnabled(enableSend && enableFMU);
+    ui_->loadFMUTxBrowse->setEnabled(enableSend && enableFMU);
 }
 
 void
 MainWindow::EnableSendToNetwork2()
 {
-    ui_->sendOutPortNum_2->setEnabled(ui_->enableSendToNetwork_2->checkState() == Qt::Checked);
+    bool enableSend = ui_->enableSendToNetwork_2->checkState() == Qt::Checked;
+    ui_->sendOutPortNum_2->setEnabled(enableSend);
+    bool enableFMU = ui_->checkBoxFMUTx_2->checkState() == Qt::Checked;
+    ui_->checkBoxFMUTx_2->setEnabled(enableSend);
+    ui_->loadFMUTx_2->setEnabled(enableSend && enableFMU);
+    ui_->loadFMUTxBrowse_2->setEnabled(enableSend && enableFMU);
 }
 
 void
@@ -350,6 +589,13 @@ MainWindow::CheckFieldsValidity()
         ui_->portNumber->text().toUInt(&success);
         if(success == false)
             errMsg += "  Port number should be valid integer!\n";
+
+        // Rx FMU file
+        if(ui_->checkBoxFMURx->isChecked() && QFileInfo::exists(ui_->loadFMURx->text()) == false)
+        {
+            success = false;
+            errMsg += "  Connection FMU file doesn't exist!\n";
+        }
     }
     else
     {
@@ -366,6 +612,15 @@ MainWindow::CheckFieldsValidity()
             ui_->deltaDelay->text().toUInt(&success);
             if(success == false)
                 errMsg += "  Port number should be valid positive integer!\n";
+        }
+
+        // Tx FMU file
+        if( ui_->enableSendToNetwork->isChecked() &&
+            ui_->checkBoxFMUTx->isChecked() &&
+            QFileInfo::exists(ui_->loadFMUTx->text()) == false )
+        {
+            success = false;
+            errMsg += "  Send FMU file doesn't exist!\n";
         }
     }
 
@@ -397,6 +652,13 @@ MainWindow::CheckFieldsValidity2()
         ui_->portNumber_2->text().toUInt(&success);
         if(success == false)
             errMsg += "  Port number should be valid integer!\n";
+
+        // Rx FMU file
+        if(ui_->checkBoxFMURx_2->isChecked() && QFileInfo::exists(ui_->loadFMURx_2->text()) == false)
+        {
+            success = false;
+            errMsg += "  Connection FMU file doesn't exist!\n";
+        }
     }
     else
     {
@@ -413,6 +675,15 @@ MainWindow::CheckFieldsValidity2()
             ui_->deltaDelay_2->text().toUInt(&success);
             if(success == false)
                 errMsg += "  Port number should be valid positive integer!\n";
+        }
+
+        // Tx FMU file
+        if( ui_->enableSendToNetwork_2->isChecked() &&
+            ui_->checkBoxFMUTx_2->isChecked() &&
+            QFileInfo::exists(ui_->loadFMUTx_2->text()) == false )
+        {
+            success = false;
+            errMsg += "  Send FMU file doesn't exist!\n";
         }
     }
 
@@ -443,6 +714,23 @@ MainWindow::ConnectSignalsToSlots()
     connect(ui_->rbConnection_2, &QRadioButton::clicked, this, &MainWindow::RBConnection2);
     connect(ui_->rbPlayback_2,   &QRadioButton::clicked, this, &MainWindow::RBPlayback2);
 
+    // fmu rx
+    connect(ui_->checkBoxFMURx,     &QCheckBox::clicked,    this, &MainWindow::CheckBoxFMURx);
+    connect(ui_->checkBoxFMURx_2,   &QCheckBox::clicked,    this, &MainWindow::CheckBoxFMURx2);
+    connect(ui_->loadFMURx,         &QLineEdit::textEdited, this, &MainWindow::LoadFMURxEdited);
+    connect(ui_->loadFMURxBrowse,   &QPushButton::clicked,  this, &MainWindow::LoadFMURxBrowse);
+    connect(ui_->loadFMURx_2,       &QLineEdit::textEdited, this, &MainWindow::LoadFMURxEdited2);
+    connect(ui_->loadFMURxBrowse_2, &QPushButton::clicked,  this, &MainWindow::LoadFMURxBrowse2);
+
+
+    // fmu rx
+    connect(ui_->checkBoxFMUTx,     &QCheckBox::clicked,    this, &MainWindow::CheckBoxFMUTx);
+    connect(ui_->checkBoxFMUTx_2,   &QCheckBox::clicked,    this, &MainWindow::CheckBoxFMUTx2);
+    connect(ui_->loadFMUTx,         &QLineEdit::textEdited, this, &MainWindow::LoadFMUTxEdited);
+    connect(ui_->loadFMUTxBrowse,   &QPushButton::clicked,  this, &MainWindow::LoadFMUTxBrowse);
+    connect(ui_->loadFMUTx_2,       &QLineEdit::textEdited, this, &MainWindow::LoadFMUTxEdited2);
+    connect(ui_->loadFMUTxBrowse_2, &QPushButton::clicked,  this, &MainWindow::LoadFMUTxBrowse2);
+
     // load/save playback file
     connect(ui_->loadFile,         &QLineEdit::textEdited, this, &MainWindow::LoadFileEdited);
     connect(ui_->loadFileBrowse,   &QPushButton::clicked, this, &MainWindow::LoadFileBrowse);
@@ -450,7 +738,7 @@ MainWindow::ConnectSignalsToSlots()
     connect(ui_->loadFileBrowse_2, &QPushButton::clicked, this, &MainWindow::LoadFileBrowse2);
 
     // enable sent out
-    connect(ui_->enableSendToNetwork, &QCheckBox::clicked, this, &MainWindow::EnableSendToNetwork);
+    connect(ui_->enableSendToNetwork,   &QCheckBox::clicked, this, &MainWindow::EnableSendToNetwork);
     connect(ui_->enableSendToNetwork_2, &QCheckBox::clicked, this, &MainWindow::EnableSendToNetwork2);
 
     // Play/Pause
@@ -459,17 +747,37 @@ MainWindow::ConnectSignalsToSlots()
 
     // signals and slots related to connection status
     // If not queued, this signal will block the GUI. Same applies for Connect/Disconnect in TCPReceiver.
-    connect(this, &MainWindow::ConnectRequested, receiver_, &TCPReceiver::ConnectRequested, Qt::QueuedConnection);
-    connect(receiver_, &TCPReceiver::Connected, this, &MainWindow::Connected);
-    connect(receiver_, &TCPReceiver::Disconnected, this, &MainWindow::Disconnected);
-    connect(receiver_, &TCPReceiver::Connected, glWidget_, &GLWidget::Connected, Qt::DirectConnection);
-    connect(receiver_, &TCPReceiver::Disconnected, glWidget_, &GLWidget::Disconnected, Qt::DirectConnection);
+    connect(this, &MainWindow::ConnectRequested, tcpReceiver_, &TCPReceiver::ConnectRequested, Qt::QueuedConnection);
+    connect(tcpReceiver_, &TCPReceiver::Connected, this, &MainWindow::Connected);
+    connect(tcpReceiver_, &TCPReceiver::Disconnected, this, &MainWindow::Disconnected);
+    connect(tcpReceiver_, &TCPReceiver::Connected, glWidget_, &GLWidget::Connected, Qt::DirectConnection);
+    connect(tcpReceiver_, &TCPReceiver::Disconnected, glWidget_, &GLWidget::Disconnected, Qt::DirectConnection);
 
-    connect(this, &MainWindow::ConnectRequested2, receiver2_, &TCPReceiver::ConnectRequested, Qt::QueuedConnection);
-    connect(receiver2_, &TCPReceiver::Connected, this, &MainWindow::Connected2);
-    connect(receiver2_, &TCPReceiver::Disconnected, this, &MainWindow::Disconnected2);
-    connect(receiver2_, &TCPReceiver::Connected, glWidget2_, &GLWidget::Connected, Qt::DirectConnection);
-    connect(receiver2_, &TCPReceiver::Disconnected, glWidget2_, &GLWidget::Disconnected, Qt::DirectConnection);
+    connect(tcpReceiver_, &TCPReceiver::UpdateSliderTime, this, &MainWindow::UpdateSliderTime);
+
+    connect(this, &MainWindow::ConnectRequested2, tcpReceiver2_, &TCPReceiver::ConnectRequested, Qt::QueuedConnection);
+    connect(tcpReceiver2_, &TCPReceiver::Connected, this, &MainWindow::Connected2);
+    connect(tcpReceiver2_, &TCPReceiver::Disconnected, this, &MainWindow::Disconnected2);
+    connect(tcpReceiver2_, &TCPReceiver::Connected, glWidget2_, &GLWidget::Connected, Qt::DirectConnection);
+    connect(tcpReceiver2_, &TCPReceiver::Disconnected, glWidget2_, &GLWidget::Disconnected, Qt::DirectConnection);
+
+    connect(tcpReceiver2_, &TCPReceiver::UpdateSliderTime, this, &MainWindow::UpdateSliderTime2);
+
+    connect(this, &MainWindow::FMUConnectRequested, fmuReceiver_, &FMUReceiver::ConnectRequested, Qt::QueuedConnection);
+    connect(fmuReceiver_, &FMUReceiver::Connected, this, &MainWindow::Connected);
+    connect(fmuReceiver_, &FMUReceiver::Disconnected, this, &MainWindow::Disconnected);
+    connect(fmuReceiver_, &FMUReceiver::Connected, glWidget_, &GLWidget::Connected, Qt::DirectConnection);
+    connect(fmuReceiver_, &FMUReceiver::Disconnected, glWidget_, &GLWidget::Disconnected, Qt::DirectConnection);
+
+    connect(fmuReceiver_, &FMUReceiver::UpdateSliderTime, this, &MainWindow::UpdateSliderTime);
+
+    connect(this, &MainWindow::FMUConnectRequested2, fmuReceiver2_, &FMUReceiver::ConnectRequested, Qt::QueuedConnection);
+    connect(fmuReceiver2_, &FMUReceiver::Connected, this, &MainWindow::Connected2);
+    connect(fmuReceiver2_, &FMUReceiver::Disconnected, this, &MainWindow::Disconnected2);
+    connect(fmuReceiver2_, &FMUReceiver::Connected, glWidget2_, &GLWidget::Connected, Qt::DirectConnection);
+    connect(fmuReceiver2_, &FMUReceiver::Disconnected, glWidget2_, &GLWidget::Disconnected, Qt::DirectConnection);
+
+    connect(fmuReceiver2_, &FMUReceiver::UpdateSliderTime, this, &MainWindow::UpdateSliderTime2);
 
     connect(this, &MainWindow::StartPlaybackRequested, reader_, &OsiReader::StartReadFile, Qt::QueuedConnection);
     connect(reader_, &OsiReader::Connected, this, &MainWindow::Connected);
@@ -490,11 +798,20 @@ MainWindow::ConnectSignalsToSlots()
     connect(reader2_, &OsiReader::UpdateSliderValue, this, &MainWindow::UpdateSliderValue2);
 
     //Main loop: receive(read) -> parse -> update objects
-    connect(receiver_, &TCPReceiver::MessageReceived, osiparser_, &OsiParser::ParseReceivedMessage, Qt::QueuedConnection);
-    connect(receiver2_, &TCPReceiver::MessageReceived, osiparser2_, &OsiParser::ParseReceivedMessage, Qt::QueuedConnection);
+    connect(tcpReceiver_, &TCPReceiver::MessageSDReceived, osiparser_, &OsiParser::ParseReceivedSDMessage, Qt::QueuedConnection);
+    connect(tcpReceiver_, &TCPReceiver::MessageSVReceived, osiparser_, &OsiParser::ParseReceivedSVMessage, Qt::QueuedConnection);
+    connect(tcpReceiver2_, &TCPReceiver::MessageSDReceived, osiparser2_, &OsiParser::ParseReceivedSDMessage, Qt::QueuedConnection);
+    connect(tcpReceiver2_, &TCPReceiver::MessageSVReceived, osiparser2_, &OsiParser::ParseReceivedSVMessage, Qt::QueuedConnection);
 
-    connect(reader_, &OsiReader::MessageSendout, osiparser_, &OsiParser::ParseReceivedMessage, Qt::QueuedConnection);
-    connect(reader2_, &OsiReader::MessageSendout, osiparser2_, &OsiParser::ParseReceivedMessage, Qt::QueuedConnection);
+    connect(fmuReceiver_, &FMUReceiver::MessageSDReceived, osiparser_, &OsiParser::ParseReceivedSDMessage, Qt::QueuedConnection);
+    connect(fmuReceiver_, &FMUReceiver::MessageSVReceived, osiparser_, &OsiParser::ParseReceivedSVMessage, Qt::QueuedConnection);
+    connect(fmuReceiver2_, &FMUReceiver::MessageSDReceived, osiparser2_, &OsiParser::ParseReceivedSDMessage, Qt::QueuedConnection);
+    connect(fmuReceiver2_, &FMUReceiver::MessageSVReceived, osiparser2_, &OsiParser::ParseReceivedSVMessage, Qt::QueuedConnection);
+
+    connect(reader_, &OsiReader::MessageSDSendout, osiparser_, &OsiParser::ParseReceivedSDMessage, Qt::QueuedConnection);
+    connect(reader_, &OsiReader::MessageSVSendout, osiparser_, &OsiParser::ParseReceivedSVMessage, Qt::QueuedConnection);
+    connect(reader2_, &OsiReader::MessageSDSendout, osiparser2_, &OsiParser::ParseReceivedSDMessage, Qt::QueuedConnection);
+    connect(reader2_, &OsiReader::MessageSVSendout, osiparser2_, &OsiParser::ParseReceivedSVMessage, Qt::QueuedConnection);
 
     connect(osiparser_, &OsiParser::MessageParsed, glWidget_, &GLWidget::MessageParsed, Qt::QueuedConnection);
     connect(osiparser2_, &OsiParser::MessageParsed, glWidget2_, &GLWidget::MessageParsed, Qt::QueuedConnection);
@@ -556,6 +873,15 @@ MainWindow::ConnectSignalsToSlots()
 
     // menu quit
     connect(ui_->actionQuit, &QAction::triggered, this, &MainWindow::Quit);
+
+    // FOV connection
+    connect(ui_->showFOV, &QToolButton::clicked, this, &MainWindow::ShowFOV);
+    connect(ui_->showFOV_2, &QToolButton::clicked, this, &MainWindow::ShowFOV2);
+    connect(ui_->dataType, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &MainWindow::CBDataTypeCon);
+    connect(ui_->playbackDataType, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &MainWindow::CBDataTypePlay);
+    connect(ui_->dataType_2, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &MainWindow::CBDataTypeCon2);
+    connect(ui_->playbackDataType_2, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &MainWindow::CBDataTypePlay2);
+
 }
 
 void
@@ -613,6 +939,19 @@ MainWindow::EnableSrcGroups2(bool enable)
 void
 MainWindow::EnableConnectionGroup1(bool enable)
 {
+    ui_->checkBoxFMURx->setEnabled(enable);
+    if(enable)
+    {
+        bool enableFmu = ui_->checkBoxFMURx->isChecked();
+        ui_->loadFMURx->setEnabled(enableFmu);
+        ui_->loadFMURxBrowse->setEnabled(enableFmu);
+    }
+    else
+    {
+        ui_->loadFMURx->setEnabled(false);
+        ui_->loadFMURxBrowse->setEnabled(false);
+    }
+
     ui_->ipAddress->setEnabled(enable);
     ui_->portNumber->setEnabled(enable);
     ui_->dataType->setEnabled(enable);
@@ -621,6 +960,19 @@ MainWindow::EnableConnectionGroup1(bool enable)
 void
 MainWindow::EnableConnectionGroup2(bool enable)
 {
+    ui_->checkBoxFMURx_2->setEnabled(enable);
+    if(enable)
+    {
+        bool enableFmu = ui_->checkBoxFMURx_2->isChecked();
+        ui_->loadFMURx_2->setEnabled(enableFmu);
+        ui_->loadFMURxBrowse_2->setEnabled(enableFmu);
+    }
+    else
+    {
+        ui_->loadFMURx_2->setEnabled(false);
+        ui_->loadFMURxBrowse_2->setEnabled(false);
+    }
+
     ui_->ipAddress_2->setEnabled(enable);
     ui_->portNumber_2->setEnabled(enable);
     ui_->dataType_2->setEnabled(enable);
@@ -634,7 +986,12 @@ MainWindow::EnablePlaybackGroup1(bool enable)
     ui_->playbackDataType->setEnabled(enable);
     ui_->deltaDelay->setEnabled(enable);
     ui_->enableSendToNetwork->setEnabled(enable);
-    ui_->sendOutPortNum->setEnabled(enable && ui_->enableSendToNetwork->checkState() == Qt::Checked);
+    bool enableSend = ui_->enableSendToNetwork->checkState() == Qt::Checked;
+    ui_->sendOutPortNum->setEnabled(enable && enableSend);
+    ui_->checkBoxFMUTx->setEnabled(enable && enableSend);
+    bool enableFMU = ui_->checkBoxFMUTx->checkState() == Qt::Checked;
+    ui_->loadFMUTx->setEnabled(enable && enableSend && enableFMU);
+    ui_->loadFMUTxBrowse->setEnabled(enable && enableSend && enableFMU);
 }
 
 void
@@ -645,7 +1002,12 @@ MainWindow::EnablePlaybackGroup2(bool enable)
     ui_->playbackDataType_2->setEnabled(enable);
     ui_->deltaDelay_2->setEnabled(enable);
     ui_->enableSendToNetwork_2->setEnabled(enable);
-    ui_->sendOutPortNum_2->setEnabled(enable && ui_->enableSendToNetwork_2->checkState() == Qt::Checked);
+    bool enableSend = ui_->enableSendToNetwork_2->checkState() == Qt::Checked;
+    ui_->sendOutPortNum_2->setEnabled(enable && enableSend);
+    ui_->checkBoxFMUTx_2->setEnabled(enable && enableSend);
+    bool enableFMU = ui_->checkBoxFMUTx_2->checkState() == Qt::Checked;
+    ui_->loadFMUTx_2->setEnabled(enable && enableSend && enableFMU);
+    ui_->loadFMUTxBrowse_2->setEnabled(enable && enableSend && enableFMU);
 }
 
 void
@@ -711,7 +1073,10 @@ MainWindow::UpdateGLWidgetMessageSource()
 {
     if(isSrcConnection_)
     {
-        glWidget_->UpdateIMessageSource(receiver_);
+        if(ui_->checkBoxFMURx->isChecked())
+            glWidget_->UpdateIMessageSource(fmuReceiver_);
+        else
+            glWidget_->UpdateIMessageSource(tcpReceiver_);
     }
     else
     {
@@ -724,7 +1089,10 @@ MainWindow::UpdateGLWidgetMessageSource2()
 {
     if(isSrcConnection2_)
     {
-        glWidget2_->UpdateIMessageSource(receiver2_);
+        if(ui_->checkBoxFMURx_2->isChecked())
+            glWidget2_->UpdateIMessageSource(fmuReceiver2_);
+        else
+            glWidget2_->UpdateIMessageSource(tcpReceiver2_);
     }
     else
     {
@@ -796,6 +1164,18 @@ MainWindow::UpdateConfigure()
         config_.ch1DataType_ = (DataType)ui_->dataType->currentIndex();
     }
 
+    if(config_.ch1FMURxCheck_ != (ui_->checkBoxFMURx->checkState() == Qt::Checked))
+    {
+        saveChange = true;
+        config_.ch1FMURxCheck_ = (ui_->checkBoxFMURx->checkState() == Qt::Checked);
+    }
+
+    if(config_.ch1LoadFMURx_ != ui_->loadFMURx->text())
+    {
+        hasChange = true;
+        config_.ch1LoadFMURx_ = ui_->loadFMURx->text();
+    }
+
     if(config_.ch1LoadFile_ != ui_->loadFile->text())
     {
         hasChange = true;
@@ -827,6 +1207,18 @@ MainWindow::UpdateConfigure()
         reader_->SetSendOutPortNum(config_.ch1SendOutPortNum_.toStdString());
     }
 
+    if(config_.ch1FMUTxCheck_ != (ui_->checkBoxFMUTx->checkState() == Qt::Checked))
+    {
+        hasChange = true;
+        config_.ch1FMUTxCheck_ = (ui_->checkBoxFMUTx->checkState() == Qt::Checked);
+    }
+
+    if(config_.ch1LoadFMUTx_ != ui_->loadFMUTx->text())
+    {
+        hasChange = true;
+        config_.ch1LoadFMUTx_ = ui_->loadFMUTx->text();
+    }
+
     if(hasChange || saveChange)
         config_.Save();
 
@@ -855,6 +1247,18 @@ MainWindow::UpdateConfigure2()
     {
         hasChange = true;
         config_.ch2DataType_ = (DataType)ui_->dataType_2->currentIndex();
+    }
+
+    if(config_.ch2FMURxCheck_ != (ui_->checkBoxFMURx_2->checkState() == Qt::Checked))
+    {
+        saveChange = true;
+        config_.ch2FMURxCheck_ = (ui_->checkBoxFMURx_2->checkState() == Qt::Checked);
+    }
+
+    if(config_.ch2LoadFMURx_ != ui_->loadFMURx_2->text())
+    {
+        hasChange = true;
+        config_.ch2LoadFMURx_ = ui_->loadFMURx_2->text();
     }
 
     if(config_.ch2LoadFile_ != ui_->loadFile_2->text())
@@ -888,6 +1292,18 @@ MainWindow::UpdateConfigure2()
         reader2_->SetSendOutPortNum(config_.ch2SendOutPortNum_.toStdString());
     }
 
+    if(config_.ch2FMUTxCheck_ != (ui_->checkBoxFMUTx_2->checkState() == Qt::Checked))
+    {
+        hasChange = true;
+        config_.ch2FMUTxCheck_ = (ui_->checkBoxFMUTx_2->checkState() == Qt::Checked);
+    }
+
+    if(config_.ch2LoadFMUTx_ != ui_->loadFMUTx_2->text())
+    {
+        hasChange = true;
+        config_.ch2LoadFMUTx_ = ui_->loadFMUTx_2->text();
+    }
+
     if(hasChange || saveChange)
         config_.Save();
 
@@ -902,9 +1318,17 @@ MainWindow::InitLoadConfigure()
         ui_->ipAddress->setText(config_.ch1IPAddress_);
         ui_->portNumber->setText(config_.ch1PortNum_);
         ui_->dataType->setCurrentIndex( static_cast<int>(config_.ch1DataType_) );
+
+        if(config_.ch1FMURxCheck_)
+            ui_->checkBoxFMURx->setCheckState(Qt::Checked);
+        else
+            ui_->checkBoxFMURx->setCheckState(Qt::Unchecked);
+        ui_->loadFMURx->setText(config_.ch1LoadFMURx_);
+
         ui_->loadFile->setText(config_.ch1LoadFile_);
         ui_->playbackDataType->setCurrentIndex( static_cast<int>(config_.ch1PlaybackDataType_) );
         ui_->deltaDelay->setText(QString::number(config_.ch1DeltaDelay_));
+
         if(config_.ch1EnableSendOut_)
             ui_->enableSendToNetwork->setCheckState(Qt::Checked);
         else
@@ -912,18 +1336,64 @@ MainWindow::InitLoadConfigure()
         ui_->sendOutPortNum->setText(config_.ch1SendOutPortNum_);
         reader_->SetSendOutPortNum(config_.ch1SendOutPortNum_.toStdString());
 
+        if(config_.ch1FMUTxCheck_)
+            ui_->checkBoxFMUTx->setCheckState(Qt::Checked);
+        else
+            ui_->checkBoxFMUTx->setCheckState(Qt::Unchecked);
+        ui_->checkBoxFMUTx->setEnabled(config_.ch1EnableSendOut_);
+        ui_->loadFMUTx->setEnabled(config_.ch1EnableSendOut_ && config_.ch1FMUTxCheck_);
+        ui_->loadFMUTx->setText(config_.ch1LoadFMUTx_);
+
+        if(config_.ch1ShowFOV_)
+            ui_->showFOV->setCheckState(Qt::Checked);
+        else
+            ui_->showFOV->setCheckState(Qt::Unchecked);
+        ui_->minRadius->setText(QString::number(config_.ch1MinRadius_));
+        ui_->maxRadius->setText(QString::number(config_.ch1MaxRadius_));
+        ui_->azimuthPos->setText(QString::number(config_.ch1AzimuthPos_));
+        ui_->azimuthNeg->setText(QString::number(config_.ch1AzimuthNeg_));
+
+
+
         ui_->ipAddress_2->setText(config_.ch2IPAddress_);
         ui_->portNumber_2->setText(config_.ch2PortNum_);
         ui_->dataType_2->setCurrentIndex( static_cast<int>(config_.ch2DataType_) );
+
+        if(config_.ch2FMURxCheck_)
+            ui_->checkBoxFMURx_2->setCheckState(Qt::Checked);
+        else
+            ui_->checkBoxFMURx_2->setCheckState(Qt::Unchecked);
+        ui_->loadFMURx_2->setText(config_.ch2LoadFMURx_);
+
         ui_->loadFile_2->setText(config_.ch2LoadFile_);
         ui_->playbackDataType_2->setCurrentIndex( static_cast<int>(config_.ch2PlaybackDataType_) );
         ui_->deltaDelay_2->setText(QString::number(config_.ch2DeltaDelay_));
+
         if(config_.ch2EnableSendOut_)
             ui_->enableSendToNetwork_2->setCheckState(Qt::Checked);
         else
             ui_->enableSendToNetwork_2->setCheckState(Qt::Unchecked);
         ui_->sendOutPortNum_2->setText(config_.ch2SendOutPortNum_);
         reader2_->SetSendOutPortNum(config_.ch2SendOutPortNum_.toStdString());
+
+        if(config_.ch2FMUTxCheck_)
+            ui_->checkBoxFMUTx_2->setCheckState(Qt::Checked);
+        else
+            ui_->checkBoxFMUTx_2->setCheckState(Qt::Unchecked);
+        ui_->checkBoxFMUTx_2->setEnabled(config_.ch2EnableSendOut_);
+        ui_->loadFMUTx_2->setEnabled(config_.ch2EnableSendOut_ && config_.ch2FMUTxCheck_);
+        ui_->loadFMUTx_2->setText(config_.ch2LoadFMUTx_);
+
+        if(config_.ch2ShowFOV_)
+            ui_->showFOV_2->setCheckState(Qt::Checked);
+        else
+            ui_->showFOV_2->setCheckState(Qt::Unchecked);
+        ui_->minRadius_2->setText(QString::number(config_.ch2MinRadius_));
+        ui_->maxRadius_2->setText(QString::number(config_.ch2MaxRadius_));
+        ui_->azimuthPos_2->setText(QString::number(config_.ch2AzimuthPos_));
+        ui_->azimuthNeg_2->setText(QString::number(config_.ch2AzimuthNeg_));
+
+
 
         ui_->actionCombiCh->setChecked(config_.combineChannel_);
         ui_->actionShowGrid->setChecked(config_.showGrid_);
@@ -949,21 +1419,21 @@ MainWindow::InitLoadConfigure()
         config_.typeColors_.insert(ObjectType::TrafficSign,   Qt::white);
         config_.typeColors_.insert(ObjectType::TrafficLight,  Qt::darkGreen);
         ui_->actionShowGrid->setChecked(true);
-        ui_->actionShowObject->setChecked(true);
+        ui_->actionShowObject->setChecked(false);
     }
 }
 
 void
 MainWindow::InitComboBoxes()
 {
-    ui_->dataType->addItem("GroundTruth");
+    ui_->dataType->addItem("SensorView");
     ui_->dataType->addItem("SensorData");
-    ui_->dataType_2->addItem("GroundTruth");
+    ui_->dataType_2->addItem("SensorView");
     ui_->dataType_2->addItem("SensorData");
 
-    ui_->playbackDataType->addItem("GroundTruth");
+    ui_->playbackDataType->addItem("SensorView");
     ui_->playbackDataType->addItem("SensorData");
-    ui_->playbackDataType_2->addItem("GroundTruth");
+    ui_->playbackDataType_2->addItem("SensorView");
     ui_->playbackDataType_2->addItem("SensorData");
 }
 
@@ -1051,6 +1521,132 @@ MainWindow::CombineChannels()
 {
     config_.combineChannel_ = !config_.combineChannel_;
     config_.Save();
+}
+
+void
+MainWindow::ShowFOV()
+{
+    // fetch data
+    if(ui_->showFOV->isChecked())
+    {
+        QString err;
+        bool success = false;
+        float minR = ui_->minRadius->text().toFloat(&success);
+        if(!success)
+            err += "input valid minimum radius parameter in Channel 1\n";
+
+        float maxR = ui_->maxRadius->text().toFloat(&success);
+        if(!success)
+            err += "input valid maximum radius parameter in Channel 1\n";
+
+        float aPos = ui_->azimuthPos->text().toFloat(&success);
+        if(!success)
+            err += "input valid azimuth positive angle in Channel 1\n";
+
+        float aNeg = ui_->azimuthNeg->text().toFloat(&success);
+        if(!success)
+            err += "input valid azimuth negtive angle in Channel 1\n";
+
+        if(err.isEmpty())
+        {
+            config_.ch1ShowFOV_ = true;
+            config_.ch1MinRadius_ = minR;
+            config_.ch1MaxRadius_ = maxR;
+            config_.ch1AzimuthPos_ = aPos;
+            config_.ch1AzimuthNeg_ = aNeg;
+            EnableShowFOV(false);
+            aPos = (aPos/180)*M_PI;
+            aNeg = (aNeg/180)*M_PI;
+            glWidget_->UpdateFOVParam(minR, maxR, aPos, aNeg);
+        }
+        else
+        {
+            config_.ch1ShowFOV_ = false;
+            EnableShowFOV(true);
+            glWidget_->UpdateFOVPaint(false);
+            ui_->showFOV->setChecked(false);
+            ShowErrorMessage(err);
+        }
+    }
+    else
+    {
+        EnableShowFOV(true);
+        glWidget_->UpdateFOVPaint(false);
+    }
+
+    config_.Save();
+}
+
+void
+MainWindow::ShowFOV2()
+{
+    // fetch data
+    if(ui_->showFOV_2->isChecked())
+    {
+        QString err;
+        bool success = false;
+        float minR = ui_->minRadius_2->text().toFloat(&success);
+        if(!success)
+            err += "input valid minimum radius parameter in Channel 2\n";
+
+        float maxR = ui_->maxRadius_2->text().toFloat(&success);
+        if(!success)
+            err += "input valid maximum radius parameter in Channel 2\n";
+
+        float aPos = ui_->azimuthPos_2->text().toFloat(&success);
+        if(!success)
+            err += "input valid azimuth positive angle in Channel 2\n";
+
+        float aNeg = ui_->azimuthNeg_2->text().toFloat(&success);
+        if(!success)
+            err += "input valid azimuth negtive angle in Channel 2\n";
+
+        if(err.isEmpty())
+        {
+            config_.ch2ShowFOV_ = true;
+            config_.ch2MinRadius_ = minR;
+            config_.ch2MaxRadius_ = maxR;
+            config_.ch2AzimuthPos_ = aPos;
+            config_.ch2AzimuthNeg_ = aNeg;
+            EnableShowFOV2(false);
+            aPos = (aPos/180)*M_PI;
+            aNeg = (aNeg/180)*M_PI;
+            glWidget2_->UpdateFOVParam(minR, maxR, aPos, aNeg);
+        }
+        else
+        {
+            config_.ch2ShowFOV_ = false;
+            EnableShowFOV2(true);
+            glWidget2_->UpdateFOVPaint(false);
+            ui_->showFOV_2->setChecked(false);
+            ShowErrorMessage(err);
+        }
+    }
+    else
+    {
+        EnableShowFOV2(true);
+        glWidget2_->UpdateFOVPaint(false);
+    }
+
+    config_.Save();
+}
+
+void
+MainWindow::EnableShowFOV(const bool enable)
+{
+    ui_->minRadius->setEnabled(enable);
+    ui_->maxRadius->setEnabled(enable);
+    ui_->azimuthNeg->setEnabled(enable);
+    ui_->azimuthPos->setEnabled(enable);
+}
+
+void
+MainWindow::EnableShowFOV2(const bool enable)
+{
+    ui_->minRadius_2->setEnabled(enable);
+    ui_->maxRadius_2->setEnabled(enable);
+    ui_->azimuthNeg_2->setEnabled(enable);
+    ui_->azimuthPos_2->setEnabled(enable);
 }
 
 void
@@ -1170,14 +1766,25 @@ MainWindow::Play()
 
     if(isSrcConnection_)
     {
-        emit ConnectRequested(config_.ch1IPAddress_,
-                              config_.ch1PortNum_,
-                              config_.ch1DataType_);
+        if(ui_->checkBoxFMURx->isChecked())
+        {
+            emit FMUConnectRequested(config_.ch1IPAddress_,
+                                     config_.ch1PortNum_,
+                                     config_.ch1LoadFMURx_,
+                                     config_.ch1DataType_);
+        }
+        else
+        {
+            emit ConnectRequested(config_.ch1IPAddress_,
+                                  config_.ch1PortNum_,
+                                  config_.ch1DataType_);
+        }
     }
     else
     {
         emit StartPlaybackRequested(config_.ch1LoadFile_,
-                                    config_.ch1PlaybackDataType_);
+                                    config_.ch1PlaybackDataType_,
+                                    config_.ch1LoadFMUTx_);
     }
 }
 
@@ -1188,10 +1795,12 @@ MainWindow::TogglePause()
 
     if(isConnected_)
     {
-        receiver_->isPaused_ = isPlaying_;
+        if(ui_->checkBoxFMURx->isChecked())
+            fmuReceiver_->isPaused_ = isPlaying_;
+        else
+            tcpReceiver_->isPaused_ = isPlaying_;
     }
-
-    if(isPlayed_)
+    else if(isPlayed_)
     {
         if(isPlaying_)
         {
@@ -1216,9 +1825,16 @@ void
 MainWindow::Stop()
 {
     if(isConnected_)
-        receiver_->DisconnectRequested();
+    {
+        if(ui_->checkBoxFMURx->isChecked())
+            fmuReceiver_->DisconnectRequested();
+        else
+            tcpReceiver_->DisconnectRequested();
+    }
     else if(isPlayed_)
+    {
         reader_->StopReadFile();
+    }
 
     ResetSliderTime();
 }
@@ -1230,14 +1846,25 @@ MainWindow::Play2()
 
     if(isSrcConnection2_)
     {
-        emit ConnectRequested2(config_.ch2IPAddress_,
-                               config_.ch2PortNum_,
-                               config_.ch2DataType_);
+        if(ui_->checkBoxFMURx_2->isChecked())
+        {
+            emit FMUConnectRequested2(config_.ch2IPAddress_,
+                                      config_.ch2PortNum_,
+                                      config_.ch2LoadFMURx_,
+                                      config_.ch2DataType_);
+        }
+        else
+        {
+            emit ConnectRequested2(config_.ch2IPAddress_,
+                                   config_.ch2PortNum_,
+                                   config_.ch2DataType_);
+        }
     }
     else
     {
         emit StartPlaybackRequested2(config_.ch2LoadFile_,
-                                     config_.ch1PlaybackDataType_);
+                                     config_.ch2PlaybackDataType_,
+                                     config_.ch2LoadFMUTx_);
     }
 }
 
@@ -1248,7 +1875,10 @@ MainWindow::TogglePause2()
 
     if(isConnected2_)
     {
-        receiver2_->isPaused_ = isPlaying2_;
+        if(ui_->checkBoxFMURx_2->isChecked())
+            fmuReceiver2_->isPaused_ = isPlaying_;
+        else
+            tcpReceiver2_->isPaused_ = isPlaying2_;
     }
     else if(isPlayed2_)
     {
@@ -1275,9 +1905,16 @@ void
 MainWindow::Stop2()
 {
     if(isConnected2_)
-        receiver2_->DisconnectRequested();
+    {
+        if(ui_->checkBoxFMURx_2->isChecked())
+            fmuReceiver2_->DisconnectRequested();
+        else
+            tcpReceiver2_->DisconnectRequested();
+    }
     else if(isPlayed2_)
+    {
         reader2_->StopReadFile();
+    }
 
     ResetSliderTime2();
 }
@@ -1406,6 +2043,12 @@ MainWindow::UpdateSliderValue(int sliderValue)
     ui_->hSlider->blockSignals(true);
     ui_->hSlider->setValue(sliderValue);
     ui_->hSlider->blockSignals(false);
+    UpdateSliderTime(sliderValue);
+}
+
+void
+MainWindow::UpdateSliderTime(int sliderValue)
+{
     ui_->hSliderTime->setText(GetStringFromMilliSecond(sliderValue));
 }
 
@@ -1415,6 +2058,12 @@ MainWindow::UpdateSliderValue2(int sliderValue)
     ui_->hSlider_2->blockSignals(true);
     ui_->hSlider_2->setValue(sliderValue);
     ui_->hSlider_2->blockSignals(false);
+    UpdateSliderTime2(sliderValue);
+}
+
+void
+MainWindow::UpdateSliderTime2(int sliderValue)
+{
     ui_->hSliderTime_2->setText(GetStringFromMilliSecond(sliderValue));
 }
 

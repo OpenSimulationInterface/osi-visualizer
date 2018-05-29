@@ -18,6 +18,7 @@
 
 class GLWidget;
 class TCPReceiver;
+class FMUReceiver;
 class AppConfig;
 class OsiParser;
 class OsiReader;
@@ -35,6 +36,8 @@ class MainWindow : public QMainWindow
         explicit MainWindow(QWidget* parent = nullptr);
         ~MainWindow();
 
+        void LocalUpdate();
+
     signals:
         void UpdateGrid();
         void UpdateLane();
@@ -47,11 +50,23 @@ class MainWindow : public QMainWindow
                                const QString& port,
                                const DataType dataType);
 
+        void FMUConnectRequested(const QString& ipAddress,
+                                 const QString& port,
+                                 const QString& fmuPath,
+                                 const DataType dataType);
+
+        void FMUConnectRequested2(const QString& ipAddress,
+                                  const QString& port,
+                                  const QString& fmuPath,
+                                  const DataType dataType);
+
         void StartPlaybackRequested(const QString& fileName,
-                                    const DataType dataType);
+                                    const DataType dataType,
+                                    const QString& fmuPath);
 
         void StartPlaybackRequested2(const QString& fileName,
-                                     const DataType dataType);
+                                     const DataType dataType,
+                                     const QString& fmuPath);
 
     public slots:
         void EnableExport(bool enable);
@@ -68,7 +83,9 @@ class MainWindow : public QMainWindow
         void UpdateSliderRange(int sliderRange);
         void UpdateSliderRange2(int sliderRange);
         void UpdateSliderValue(int sliderValue);
+        void UpdateSliderTime(int sliderValue);
         void UpdateSliderValue2(int sliderValue);
+        void UpdateSliderTime2(int sliderValue);
 
         void DisplayObjectInformation(GLObject* object);
         void DisplayObjectInformation2(GLObject* object);
@@ -91,9 +108,29 @@ class MainWindow : public QMainWindow
         void RBPlayback();
         void RBPlayback2();
 
+        void CBDataTypeCon(int index);
+        void CBDataTypePlay(int index);
+        void CBDataTypeCon2(int index);
+        void CBDataTypePlay2(int index);
+        void ToggleShowFOV();
+        void ToggleShowFOV2();
+
+        void CheckBoxFMURx();
+        void CheckBoxFMURx2();
+        void LoadFMURxEdited(const QString& text);
+        void LoadFMURxBrowse();
+        void LoadFMURxEdited2(const QString& text);
+        void LoadFMURxBrowse2();
+
+        void CheckBoxFMUTx();
+        void CheckBoxFMUTx2();
+        void LoadFMUTxEdited(const QString& text);
+        void LoadFMUTxBrowse();
+        void LoadFMUTxEdited2(const QString& text);
+        void LoadFMUTxBrowse2();
+
         void LoadFileEdited(const QString& text);
         void LoadFileBrowse();
-
         void LoadFileEdited2(const QString& text);
         void LoadFileBrowse2();
 
@@ -111,6 +148,9 @@ class MainWindow : public QMainWindow
         void DisplayObjectDialogFinished2(int);
 
         void CombineChannels();
+
+        void ShowFOV();
+        void ShowFOV2();
 
 
     private:
@@ -184,6 +224,9 @@ class MainWindow : public QMainWindow
 
         void ShowErrorMessage(const QString& errMsg);
 
+        void EnableShowFOV(const bool enable);
+        void EnableShowFOV2(const bool enable);
+
 
         // Configurations
         AppConfig config_;
@@ -211,12 +254,14 @@ class MainWindow : public QMainWindow
         Ui::MainWindow *ui_;
 
         GLWidget*    glWidget_;
-        TCPReceiver* receiver_;
+        TCPReceiver* tcpReceiver_;
+        FMUReceiver* fmuReceiver_;
         OsiReader*   reader_;
         OsiParser*   osiparser_;
 
         GLWidget*    glWidget2_;
-        TCPReceiver* receiver2_;
+        TCPReceiver* tcpReceiver2_;
+        FMUReceiver* fmuReceiver2_;
         OsiReader*   reader2_;
         OsiParser*   osiparser2_;
 

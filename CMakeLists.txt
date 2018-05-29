@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.1)
 add_subdirectory(open-simulation-interface)
+add_subdirectory(osi-sensor-model-packaging/examples)
 project(osi-visualizer)
 
 set(CMAKE_CXX_STANDARD 11)
@@ -31,6 +32,9 @@ set(SOURCES
     src/gltrafficsign.cpp
     src/qrc_resources.cpp
     src/osiparser.cpp
+    src/glfieldofview.cpp
+    src/fmureceiver.cpp
+    src/utils.cpp
 )
 
 set(HEADERS
@@ -55,9 +59,16 @@ set(HEADERS
     include/glpoint.h
     include/gltrafficsign.h
     include/osiparser.h
+    include/glfieldofview.h
+    include/fmureceiver.h
+    include/utils.h
 )
 
-include_directories(include)
+
+include_directories(
+    ${CMAKE_CURRENT_LIST_DIR}/include
+)
+
 
 add_executable(${PROJECT_NAME}
     ${HEADERS}
@@ -72,7 +83,9 @@ target_link_libraries(${PROJECT_NAME}
     Qt5::OpenGL
     Qt5::Network
 
-    open_simulation_interface_pic
+    open_simulation_interface
+    fmilib_shared
     protobuf
     zmq
 )
+

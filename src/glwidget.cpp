@@ -12,6 +12,8 @@
 
 #include <QWheelEvent>
 
+#include <cmath>
+
 //QMutex mutex;
 //QMutex mutex2;
 

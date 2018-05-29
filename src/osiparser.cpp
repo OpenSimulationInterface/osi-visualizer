@@ -4,6 +4,8 @@
 #include <QFileDialog>
 #include <QMessageBox>
 
+#include <cmath>
+
 /*
  *
  * This function is called when a new zmq message is received

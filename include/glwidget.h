@@ -14,6 +14,8 @@
 #include "lane.h"
 #include "imessagesource.h"
 
+#include "glfieldofview.h"
+
 #include <QOpenGLWidget>
 #include <QTreeWidgetItem>
 #include <QOpenGLFunctions>
@@ -35,16 +37,21 @@ class GLWidget : public QOpenGLWidget, protected QOpenGLFunctions_4_3_Core
 
         void UpdateIMessageSource(IMessageSource* msgSource);
 
+        void UpdateFOVPaint(const bool showFOV);
+
+        void UpdateFOVParam(const float minRadius,
+                            const float maxRadius,
+                            const float azimuthPosAngle,
+                            const float azimuthNegAngle);
+
     signals:
         void DisplayObjectInformation(GLObject* object);
         void SetTrackingEnabled(bool enable);
 
     public slots:
-//        void ZoomPlus();
-//        void ZoomMinus();
+
         void UpdateGrid();
         void Disconnected();
-//        void StopTracking();
         void StartTracking();
         void ResetCameraAll();
         void ResetCameraOrient();
@@ -60,7 +67,7 @@ class GLWidget : public QOpenGLWidget, protected QOpenGLFunctions_4_3_Core
         bool eventFilter(QObject* obj, QEvent* event);
 
     private:
-//        void Zoom(float zoom);
+
         void ResetObjectTextOrientations();
         void RenderObject(GLObject* object);
         void MouseWheel(QWheelEvent* event);
@@ -88,5 +95,8 @@ class GLWidget : public QOpenGLWidget, protected QOpenGLFunctions_4_3_Core
         QVector<GLObject*> simulationObjects_;
         QOpenGLShaderProgram shaderProgram_;
         QMap<ObjectType, QTreeWidgetItem*>& treeNodes_;
+
+        bool showFOV_;
+        GLFieldOfView* objFOV_;
 
 };

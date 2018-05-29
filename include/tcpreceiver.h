@@ -26,20 +26,20 @@ class TCPReceiver : public QObject, public IMessageSource
         signals:
             void Connected(DataType dataType);
             void Disconnected(const QString& message = "");
-            void ExportOsiMessage();
-            void MessageReceived(const osi::SensorData& sensorData,
-                                 const DataType datatype);
+            void UpdateSliderTime(int sliderValue);
+            void MessageSDReceived(const osi3::SensorData& sd);
+            void MessageSVReceived(const osi3::SensorView& sv);
 
     public slots:
         void DisconnectRequested();
-        void ConnectRequested(QString ipAddress, QString port, DataType dataType);
+        void ConnectRequested(const QString& ipAddress,
+                              const QString& port,
+                              DataType dataType);
 
     private:
 
         void ReceiveLoop();
 
-        // socket.Connected returns always true after it has been connected once
-        // (even after disconnect)
         bool isRunning_;
         bool isThreadTerminated_;
 
@@ -49,4 +49,6 @@ class TCPReceiver : public QObject, public IMessageSource
         zmq::socket_t socket_;
         DataType currentDataType_;
 };
+
+
 

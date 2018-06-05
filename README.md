@@ -2,7 +2,9 @@
 
 Visualization tool for OSI messages. This software serves as visualization tool for the current implementation of the [OSI (Open Simulation Interface)](https://github.com/OpenSimulationInterface/open-simulation-interface) mesages.The osi-visualizer supports to visualize the OSI GroundTruth and SensorData messages. It supports two independent visual channels with two different input types (file and network stream). 
 
-![alt text](https://github.com/OpenSimulationInterface/osi-visualizer/tree/master/Resources/Images/Over_View.png "Over View")
+<div align="center">
+  <img src="https://github.com/OpenSimulationInterface/osi-visualizer/tree/master/Resources/Images/Over_View.png"><br><br>
+</div>
 
 ## General Information
 
@@ -38,7 +40,9 @@ Open New Project -> CMakeLists.txt
 ### Connection:
 The channel receives osi message from the network with specific IP address and Port number, and shows up different data types.
 
-![alt text](https://github.com/OpenSimulationInterface/osi-visualizer/tree/master/Resources/Images/Connection.png "Connection Setting")
+<div align="center">
+  <img src="https://github.com/OpenSimulationInterface/osi-visualizer/tree/master/Resources/Images/Connection.png"><br><br>
+</div>
 
 ### Playback:
 The channel receives osi message from the loaded file. The tool will check a header file of same name with a extension: .txth. If it doesn't exist, the tool will create one automatically for the first time.
@@ -48,7 +52,16 @@ Example: set it to 10 ms, each message will have 10 ms more delay for playing.
 
 Besides the tool provides sending out osi message to network with specific port number.
 
-![alt text](https://github.com/OpenSimulationInterface/osi-visualizer/tree/master/Resources/Images/Playback.png "Playback Setting")
+<div align="center">
+  <img src="https://github.com/OpenSimulationInterface/osi-visualizer/tree/master/Resources/Images/Playback.png"><br><br>
+</div>
+
+### Show Field of View:
+Show field of view for sensors, like Lidar, on the grid. User can set minimum range, maximum range, azimuth positive angle and azimuth negative angle.
+
+<div align="center">
+  <img src="https://github.com/OpenSimulationInterface/osi-visualizer/tree/master/Resources/Images/FOV.png"><br><br>
+</div>
 
 ### Save OSI Message:
 Log or cut out part of the osi message stream and save it to another file. By default the threshold is 1000 osi messages. User can change this threshold in the config file.
@@ -79,7 +92,9 @@ When playing large osi files, try to adapt the Delta Delay. Then the tool render
 Channel 1 plays an osi input file and sends out the osi message to port 5564 at the same time. 
 Channel 2 receives osi message from port 5564 and shows up on the canvas.
 
-![alt text](https://github.com/OpenSimulationInterface/osi-visualizer/tree/master/Resources/Images/Demo.png "Run time screen shot")
+<div align="center">
+  <img src="https://github.com/OpenSimulationInterface/osi-visualizer/tree/master/Resources/Images/Demo.png"><br><br>
+</div>
 
 
 

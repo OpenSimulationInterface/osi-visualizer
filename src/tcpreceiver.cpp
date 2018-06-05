@@ -1,4 +1,5 @@
 #include "tcpreceiver.h"
+#include "utils.h"
 #include <QThread>
 
 
@@ -18,7 +19,7 @@ TCPReceiver::TCPReceiver()
     , currentEndpoint_("")
     , context_(1)
     , socket_(context_, ZMQ_SUB)
-    , currentDataType_(DataType::Groundtruth)
+    , currentDataType_(DataType::SensorView)
 {
     // Disable buffering
     socket_.setsockopt(ZMQ_CONFLATE, 1);
@@ -126,17 +127,37 @@ TCPReceiver::ReceiveLoop()
             if (message.size() > 0)
             {
                 msgReceived = true;
-                osi::SensorData sensorData;
 
-                if(sensorData.ParseFromArray(message.data(),message.size()))
+                if(currentDataType_ == DataType::SensorView)
                 {
-                    emit MessageReceived(sensorData, currentDataType_);
+                    osi3::SensorView sv;
+                    if(sv.ParseFromArray(message.data(),message.size()))
+                    {
+                        uint64_t curStamp = ::GetTimeStampInNanoSecond<osi3::SensorView>(sv);
+                        emit MessageSVReceived(sv);
+                        int sliderValue = curStamp / 1000000;
+                        emit UpdateSliderTime(sliderValue);
+                    }
+                    else
+                    {
+                        qDebug() << "SensorView receiving error";
+                    }
                 }
-                else
+                else //if(currentDataType_ == DataType::SensorData)
                 {
-                    qDebug() << "SensorData parsing error";
+                    osi3::SensorData sd;
+                    if(sd.ParseFromArray(message.data(),message.size()))
+                    {
+                        uint64_t curStamp = ::GetTimeStampInNanoSecond<osi3::SensorData>(sd);
+                        emit MessageSDReceived(sd);
+                        int sliderValue = curStamp / 1000000;
+                        emit UpdateSliderTime(sliderValue);
+                    }
+                    else
+                    {
+                        qDebug() << "SensorData receiving error";
+                    }
                 }
-
             }
         }
 
@@ -148,6 +169,5 @@ TCPReceiver::ReceiveLoop()
 
     isThreadTerminated_ = true;
 }
-
 
 

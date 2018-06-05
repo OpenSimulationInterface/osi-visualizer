@@ -10,6 +10,18 @@ set(CMAKE_AUTOUIC ON)
 
 find_package(Qt5 COMPONENTS Core Gui OpenGL Widgets Xml Network REQUIRED)
 
+find_path(
+  FMILIB_INCLUDE_DIRS
+  fmilib.h
+  HINTS /usr/include/fmi-library /usr/include /usr/local/include/fmi-library /usr/local/include
+)
+
+find_library(
+  FMILIB_LIBRARY
+  fmilib_shared
+  HINTS /usr/lib/fmi-library /usr/lib /usr/local/lib/fmi-library /usr/local/lib
+)
+
 set(SOURCES
     src/main.cpp
     src/mainwindow.cpp
@@ -31,6 +43,9 @@ set(SOURCES
     src/gltrafficsign.cpp
     src/qrc_resources.cpp
     src/osiparser.cpp
+    src/glfieldofview.cpp
+    src/fmureceiver.cpp
+    src/utils.cpp
 )
 
 set(HEADERS
@@ -55,9 +70,17 @@ set(HEADERS
     include/glpoint.h
     include/gltrafficsign.h
     include/osiparser.h
+    include/glfieldofview.h
+    include/fmureceiver.h
+    include/utils.h
 )
 
-include_directories(include)
+
+include_directories(
+    ${CMAKE_CURRENT_LIST_DIR}/include
+    ${FMILIB_INCLUDE_DIRS}
+)
+
 
 add_executable(${PROJECT_NAME}
     ${HEADERS}
@@ -72,7 +95,9 @@ target_link_libraries(${PROJECT_NAME}
     Qt5::OpenGL
     Qt5::Network
 
-    open_simulation_interface_pic
+    open_simulation_interface
+    ${FMILIB_LIBRARY}
     protobuf
     zmq
 )
+

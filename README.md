@@ -15,6 +15,7 @@ Some software library dependencies are needed to run the osi-visualizer:
 * ZeroMQ (>4.2.1): http://zeromq.org/intro:get-the-software
   The osi-visualizer needs to use ZeroMQ libraries to complete the socket communication between different sensor / traffic / scenario simulators. Note that the C++ Bindings are required as well.
 * protobuf 2.6.1: https://github.com/google/protobuf
+* FMILibrary 2.0.2: https://svn.jmodelica.org/FMILibrary/tags
 
 The required version of [Open Simulation Interface](https://github.com/OpenSimulationInterface/open-simulation-interface.git) is referenced as a git submodule, so be sure to run `git submodule init` && `git submodule update` after cloning the osi-visualizer repository.
 

@@ -1,0 +1,34 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 1522d91..d43fdab 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -22,6 +22,12 @@ find_library(
+   HINTS /usr/lib/fmi-library /usr/lib /usr/local/lib/fmi-library /usr/local/lib
+ )
+ 
++find_library(
++    OSIILIB_LIBRARY
++    protobuf
++    HINTS /usr/local/lib
++    )
++
+ set(SOURCES
+     src/main.cpp
+     src/mainwindow.cpp
+@@ -79,6 +85,7 @@ set(HEADERS
+ include_directories(
+     ${CMAKE_CURRENT_LIST_DIR}/include
+     ${FMILIB_INCLUDE_DIRS}
++    /usr/local/include/google
+ )
+ 
+ 
+@@ -97,7 +104,7 @@ target_link_libraries(${PROJECT_NAME}
+ 
+     open_simulation_interface
+     ${FMILIB_LIBRARY}
+-    protobuf
++    ${OSIILIB_LIBRARY}
+     zmq
+ )
+ 

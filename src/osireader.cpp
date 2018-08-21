@@ -3,7 +3,6 @@
 #include <QThread>
 #include <QMessageBox>
 
-#include <unistd.h>
 #include <iostream>
 
 #include "osireader.h"
@@ -372,7 +371,7 @@ OsiReader::BuildUpStamps(bool& isFirstMsg,
         }
 
         uint64_t timeStamp = GetTimeStampInNanoSecond<T>(data);
-        stamp2Offset_.push_back(std::make_pair(timeStamp - firstTimeStamp, offset));
+        stamp2Offset_.push_back(std::make_pair(timeStamp - (uint64_t)firstTimeStamp, offset));
     }
     else
     {
@@ -522,7 +521,7 @@ OsiReader::SendMessage(T& data,
         sleep /= 1000;
         sleep += *deltaDelay_ * 1000;
 
-        usleep(sleep);
+		QThread::usleep(sleep);
         preTimeStamp = curStamp;
 
         SendOutMessage(message);

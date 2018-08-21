@@ -1,6 +1,5 @@
 FROM nvidia/opengl:1.0-glvnd-devel
 
-RUN mkdir -p /working
 # protobuf and osi-visualizer dependencies
 RUN apt-get update && apt-get install -y \
     autoconf \
@@ -33,37 +32,12 @@ RUN wget https://jmodelica.org/fmil/FMILibrary-${FMI_VERSION}-src.zip \
     && cmake -DFMILIB_INSTALL_PREFIX=/usr/local ../FMILibrary-${FMI_VERSION} \
     && make install
 
-# install protobuf
-WORKDIR /tmp
-ENV PROTO_VERSION="3.6.0"
-RUN wget https://github.com/google/protobuf/releases/download/v${PROTO_VERSION}/protobuf-all-${PROTO_VERSION}.tar.gz \
-    && tar -xzvf protobuf-all-${PROTO_VERSION}.tar.gz \
-    && cd protobuf-${PROTO_VERSION} \
-    && ./configure \
-    && make \
-    && make check \
-    && make install \
-    && ldconfig
-
-# add some osi-visualizer patches to fix build
-COPY osi_vis_patch/cmake.patch osi_vis_patch/osi_cmake.patch /tmp/
-
-# clone and build open-simulation-interface
-
+# build open-simulation interface and osi-visualizer
 WORKDIR /opt/osi-visualizer
 
 COPY ./ /opt/osi-visualizer/
 
-
-# build open-simulation interface and osi-visualizer
-ENV OSI_COMMIT="master"
-RUN git clone https://github.com/OpenSimulationInterface/open-simulation-interface.git \
-    && git checkout "${OSI_COMMIT}"\
-    && git apply /tmp/cmake.patch \
-    && cd open-simulation-interface \
-    && git apply /tmp/osi_cmake.patch \
-    && cd .. \
-    && mkdir build \
+RUN mkdir build \
     && cd build \
     && cmake .. \
     && make \
@@ -74,4 +48,4 @@ ENV PATH="/opt/osi-visualizer:$PATH"
 
 # set workdir so that default command works
 WORKDIR /opt/osi-visualizer
-CMD ['osi-visualizer']
+CMD /opt/osi-visualizer/osi-visualizer

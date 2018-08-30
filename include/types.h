@@ -10,7 +10,7 @@
 #include "osi_common.pb.h"
 #include <QVector>
 #include <QVector3D>
-
+#include <QColor>
 
 #include <memory>
 
@@ -72,4 +72,9 @@ struct LaneStruct
 };
 using LaneMessage = QVector<LaneStruct>;
 
-
+struct PointStruct
+{
+	QVector3D position;		// Carthesian global coordinates of the point
+	float color;			// The color is a real number in [0,1]
+};
+using PointMessage = QVector<PointStruct>;

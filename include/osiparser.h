@@ -27,7 +27,8 @@ class OsiParser : public QObject
 
         signals:
             void MessageParsed(const Message& message,
-                               const LaneMessage& laneMessage);
+                               const LaneMessage& laneMessage,
+							   const PointMessage& pointMessage);
             void EnableExport(bool enable);
             void SaveOSIMsgOverflow(int osiMsgSaveThreshold);
 
@@ -56,7 +57,8 @@ class OsiParser : public QObject
 
         void ParseSensorData(const osi3::SensorData& sensorData,
                              Message& objectMessage,
-                             LaneMessage& laneMessage);
+                             LaneMessage& laneMessage,
+							 PointMessage& pointMessage);
 
         void ParseSensorDataMovingObject(Message& objectMessage,
                                          const osi3::BaseMoving& baseObject,

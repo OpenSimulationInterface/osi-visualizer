@@ -3,6 +3,7 @@
 #include "glpointcloud.h"
 #include <QVector3D>
 #include <QOpenGLFunctions_4_3_Core>
+#include <memory>
 
 class PointCloud
 {
@@ -13,7 +14,7 @@ public:
 
 	int pointcloudId_;
 	bool isVisible_;
-	GLPointCloud glPointCloud_;
+	std::unique_ptr<GLPointCloud> glPointCloud_;
 	QImage colorscheme;				// Color scheme of the point cloud. The line from texture coordinates (0,0) to (1,1) defines color(intensity)
 
 private:

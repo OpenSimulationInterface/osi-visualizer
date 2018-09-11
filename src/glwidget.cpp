@@ -192,8 +192,8 @@ GLWidget::paintGL()
             RenderObject(object);
     }
 
-	if (pointcloud_.isVisible_) {
-		RenderObject(&pointcloud_.glPointCloud_);
+	if (pointcloud_.isVisible_ && pointcloud_.glPointCloud_ != nullptr) {
+		RenderObject(pointcloud_.glPointCloud_.get());
 	}
 	
     foreach (GLObject* object, simulationObjects_)

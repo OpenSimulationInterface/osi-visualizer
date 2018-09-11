@@ -4,7 +4,6 @@
 
 #include "glwidget.h"
 #include "glvehicle.h"
-#include "glpointcloud.h"
 #include "gltriangle.h"
 #include "glpoint.h"
 #include "global.h"
@@ -38,7 +37,6 @@ GLWidget::GLWidget(QWidget* parent,
     , mousePos_()
     , config_(config)
     , lanes_()
-	, pointcloud_(100, this, config_.srcPath_)
     , pressedKeys_()
     , sceneKeys_()
     , msgSource_(msgSource)
@@ -165,7 +163,7 @@ GLWidget::paintGL()
     //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // Depth test is disabled, thus the static objects (i.e. grid) will be drawn first.
-    // Afterwards the lanes, then the vehicles etc. are drawn, then point clouds and the texts are the last ones.
+    // Afterwards the lanes, then the vehicles etc. are drawn, the texts are the last ones.
     foreach (GLObject* staticObject, staticObjects_)
     {
         if(staticObject->isVisible_)
@@ -196,10 +194,6 @@ GLWidget::paintGL()
             RenderObject(object);
     }
 
-	if (pointcloud_.isVisible_) {
-		RenderObject(&pointcloud_.glPointCloud_);
-	}
-	
     foreach (GLObject* object, simulationObjects_)
     {
         if (object->GetTextObject() != nullptr && object->GetTextObject()->isVisible_)
@@ -241,6 +235,7 @@ GLWidget::RenderObject(GLObject* object)
         }
         shaderProgram_.setUniformValue(uniformColorLocation_, color);
     }
+
     glBindVertexArray(object->vaoId_);
     glDrawArrays(object->GetPrimitiveType(), 0, object->vertices_.size());
 }
@@ -417,8 +412,7 @@ GLWidget::ResetObjectTextOrientations()
 
 void
 GLWidget::MessageParsed(const Message& message,
-                        const LaneMessage& laneMessage,
-						const PointMessage& pointMessage)
+                        const LaneMessage& laneMessage)
 {
     // The check for a connected receiver is necessary because the signals for received messages
     // the receiver emits are asynchronous. It sometimes happens that after the receiver disconnected,
@@ -603,12 +597,6 @@ GLWidget::MessageParsed(const Message& message,
             //mutex2.unlock();
         }
     }
-
-	// copy point clouds
-	if (pointMessage.size() > 0) {
-		pointcloud_.UpdatePointCloud(pointMessage);
-	}
-	
 
     // TODO: Remove ununsed objects from object tree, also stop tracking etc
     // Hide unused objects

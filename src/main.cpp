@@ -9,7 +9,6 @@
 Q_DECLARE_METATYPE(DataType)
 Q_DECLARE_METATYPE(Message)
 Q_DECLARE_METATYPE(LaneMessage)
-Q_DECLARE_METATYPE(PointMessage)
 Q_DECLARE_METATYPE(osi3::SensorData)
 Q_DECLARE_METATYPE(osi3::SensorView)
 
@@ -18,7 +17,6 @@ int main(int argc, char *argv[])
 {
     qRegisterMetaType<Message>();
     qRegisterMetaType<LaneMessage>();
-	qRegisterMetaType<PointMessage>();
     qRegisterMetaType<DataType>();
     qRegisterMetaType<osi3::SensorData>();
     qRegisterMetaType<osi3::SensorView>();

@@ -12,7 +12,6 @@
 #include "camera.h"
 #include "appconfig.h"
 #include "lane.h"
-#include "pointcloud.h"
 #include "imessagesource.h"
 
 #include "glfieldofview.h"
@@ -59,7 +58,7 @@ class GLWidget : public QOpenGLWidget, protected QOpenGLFunctions_4_3_Core
         void Connected(DataType dataType);
         void TreeItemChanged(QTreeWidgetItem* item, int column);
         void TreeItemClicked(QTreeWidgetItem* item, int column);
-        void MessageParsed(const Message& message, const LaneMessage& laneMessage, const PointMessage& pointMessage);
+        void MessageParsed(const Message& message, const LaneMessage& laneMessage);
 
     protected:
         void paintGL();
@@ -86,7 +85,6 @@ class GLWidget : public QOpenGLWidget, protected QOpenGLFunctions_4_3_Core
         QPoint mousePos_;
         const AppConfig& config_;
         QVector<Lane*> lanes_;
-		PointCloud pointcloud_;
         QSet<int> pressedKeys_;
         QList<int> sceneKeys_;
         IMessageSource* msgSource_;

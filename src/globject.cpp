@@ -150,7 +150,7 @@ GLObject::SetText(QString text)
 }
 
 void
-GLObject::SetTexture(QImage image, bool generateMipMaps, GLint wrapping)
+GLObject::SetTexture(QImage image, bool generateMipMaps)
 {
     if (textureId_ > -1)
     {
@@ -163,8 +163,8 @@ GLObject::SetTexture(QImage image, bool generateMipMaps, GLint wrapping)
     functions_->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
                              image.width(), image.height(), 0,
                              GL_RGBA, GL_UNSIGNED_BYTE, image.bits());
-    functions_->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrapping);
-    functions_->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrapping);
+    functions_->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    functions_->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
     if (generateMipMaps)
     {

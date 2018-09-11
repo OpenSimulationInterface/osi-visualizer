@@ -1,3 +1,7 @@
+#ifdef _WIN32
+#define _USE_MATH_DEFINES
+#endif
+
 #include "glwidget.h"
 #include "glvehicle.h"
 #include "gltriangle.h"
@@ -135,7 +139,7 @@ GLWidget::initializeGL()
 
     objFOV_ = new GLFieldOfView(this, 0, 1, 1, -1);
     objFOV_->SetColor(Qt::yellow);
-    objFOV_->SetOrientation(M_PI_2);
+    objFOV_->SetOrientation((float)M_PI_2);
     objFOV_->Init();
 
     isOpenGLInitizalized_ = true;

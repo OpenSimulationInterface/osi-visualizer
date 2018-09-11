@@ -131,7 +131,7 @@ TCPReceiver::ReceiveLoop()
                 if(currentDataType_ == DataType::SensorView)
                 {
                     osi3::SensorView sv;
-                    if(sv.ParseFromArray(message.data(),message.size()))
+                    if(sv.ParseFromArray(message.data(),(int)message.size()))
                     {
                         uint64_t curStamp = ::GetTimeStampInNanoSecond<osi3::SensorView>(sv);
                         emit MessageSVReceived(sv);
@@ -146,7 +146,7 @@ TCPReceiver::ReceiveLoop()
                 else //if(currentDataType_ == DataType::SensorData)
                 {
                     osi3::SensorData sd;
-                    if(sd.ParseFromArray(message.data(),message.size()))
+                    if(sd.ParseFromArray(message.data(),(int)message.size()))
                     {
                         uint64_t curStamp = ::GetTimeStampInNanoSecond<osi3::SensorData>(sd);
                         emit MessageSDReceived(sd);

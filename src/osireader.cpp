@@ -298,7 +298,7 @@ OsiReader::CreateHeader(QString& errorMsg)
 {
     bool success (true);
 
-    std::ifstream inputFile (osiFileName_.toStdString().c_str());
+    std::ifstream inputFile (osiFileName_.toStdString().c_str(), std::ios::binary);
 
     std::string str_line_input;
     std::string str_line;
@@ -399,7 +399,7 @@ OsiReader::SaveHeader()
 void
 OsiReader::SendMessageLoop()
 {
-    std::ifstream inputFile (osiFileName_.toStdString().c_str());
+    std::ifstream inputFile (osiFileName_.toStdString().c_str(), std::ios::binary);
     bool isFirstMessage (true);
 
     while(isRunning_)

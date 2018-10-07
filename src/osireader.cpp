@@ -3,7 +3,6 @@
 #include <QThread>
 #include <QMessageBox>
 
-#include <unistd.h>
 #include <iostream>
 
 #include "osireader.h"
@@ -299,7 +298,7 @@ OsiReader::CreateHeader(QString& errorMsg)
 {
     bool success (true);
 
-    std::ifstream inputFile (osiFileName_.toStdString().c_str());
+    std::ifstream inputFile (osiFileName_.toStdString().c_str(), std::ios::binary);
 
     std::string str_line_input;
     std::string str_line;
@@ -372,7 +371,7 @@ OsiReader::BuildUpStamps(bool& isFirstMsg,
         }
 
         uint64_t timeStamp = GetTimeStampInNanoSecond<T>(data);
-        stamp2Offset_.push_back(std::make_pair(timeStamp - firstTimeStamp, offset));
+        stamp2Offset_.push_back(std::make_pair(timeStamp - (uint64_t)firstTimeStamp, offset));
     }
     else
     {
@@ -400,7 +399,7 @@ OsiReader::SaveHeader()
 void
 OsiReader::SendMessageLoop()
 {
-    std::ifstream inputFile (osiFileName_.toStdString().c_str());
+    std::ifstream inputFile (osiFileName_.toStdString().c_str(), std::ios::binary);
     bool isFirstMessage (true);
 
     while(isRunning_)
@@ -522,7 +521,7 @@ OsiReader::SendMessage(T& data,
         sleep /= 1000;
         sleep += *deltaDelay_ * 1000;
 
-        usleep(sleep);
+		QThread::usleep(sleep);
         preTimeStamp = curStamp;
 
         SendOutMessage(message);

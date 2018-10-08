@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.1)
 add_subdirectory(open-simulation-interface)
 project(osi-visualizer)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
@@ -46,6 +46,8 @@ set(SOURCES
     src/glfieldofview.cpp
     src/fmureceiver.cpp
     src/utils.cpp
+    src/glpointcloud.cpp
+    src/pointcloud.cpp
 )
 
 set(HEADERS
@@ -68,11 +70,13 @@ set(HEADERS
     include/appconfig.h
     include/global.h
     include/glpoint.h
+    include/glpointcloud.h
     include/gltrafficsign.h
     include/osiparser.h
     include/glfieldofview.h
     include/fmureceiver.h
     include/utils.h
+    include/pointcloud.h
 )
 
 

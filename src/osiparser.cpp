@@ -482,7 +482,7 @@ OsiParser::ParseSensorData(const osi3::SensorData &sensorData,
 				float color = ldd.detection().Get(j).intensity();
 				// We measure azimuth clockwise (typical in navigation, but in contrast to the standard spherical coordinates)
 				// x: up, y: out of monitor, z: right
-				QVector3D posxyz(pos.distance()*cos(pos.azimuth())*cos(pos.elevation()), 0, pos.distance()*sin(pos.azimuth())*cos(pos.elevation()));
+                QVector3D posxyz(pos.distance()*cos(pos.azimuth())*cos(pos.elevation()), 0, (-1)*pos.distance()*sin(pos.azimuth())*cos(pos.elevation()));
 				// ToDo: transform according to mounting position of sensor
 				PointStruct p = { posxyz, color};
 				pointMessage.append(p);

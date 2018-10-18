@@ -23,7 +23,7 @@ If the CMake build process does not automatically locate the required libraries,
 
 Currently we strongly recommend users to use the osi-visualizer under Ubuntu Linux 16.04 LTS. You can see a working development environment based on Ubuntu 16.04 LTS in the Dockerfile in the repository.
 
-## Build
+## Build on Linux:
 ### From Terminal:
 - cd ${SRC_DIRECTORY}
 - mkdir build
@@ -36,6 +36,22 @@ Currently we strongly recommend users to use the osi-visualizer under Ubuntu Lin
 
 ### From QtCreator:
 Open New Project -> CMakeLists.txt 
+
+## Build on Windows 10:
+- Install the required dependencies, i.e. CMake, QT5 (install the Qt5 component matching your Compiler eg. MSVC 2017 64-Bit), ZeroMQ (preferably from Anaconda as a Package), Protobuf (preferably 2.6.1) and FMILibrary (preferably 2.0.3).
+- Make sure you compile all the dependencies for x64.
+- Add the bin or lib folder to PATH environment variable of all the dependencies.
+- Open the CMakeLists.txt of OSI Visualizer and on Line 16 and 22 give the Hints of the required FMILibrary folders of your computer.
+- Open Windows PowerShell, generate the Visual Studio Solution and open Visual Studio using:
+```
+mkdir build
+cd build
+cmake -G "Visual Studio 15 2017 Win64" .. 
+./osi-visualizer.sln
+```
+- Check the Additional Dependencies of subproject osi-visualizer and build the projects one by one in the Build Order till ALL_BUILD.
+- The osi-visualizer.exe should be generated in the Debug folder, and copy the Resources folder from the source code along with the required DLLs in this directory.
+- The osi-visualizer.exe should now run.
 
 ## Usage 
 ### Connection:

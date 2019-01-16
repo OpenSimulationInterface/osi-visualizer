@@ -9,16 +9,16 @@
  *
  */
 
-TCPReceiver::TCPReceiver()
+TCPReceiver::TCPReceiver(int type)
     : IMessageSource()
 
     , isRunning_(false)
     , isThreadTerminated_(false)
-
+    , socketType_(type)
     , currentPort_("")
     , currentEndpoint_("")
     , context_(1)
-    , socket_(context_, ZMQ_SUB)
+    , socket_(context_, type)
     , currentDataType_(DataType::SensorView)
 {
     // Disable buffering
@@ -52,7 +52,10 @@ TCPReceiver::ConnectRequested(const QString &ipAddress,
         return;
     }
 
-    socket_.setsockopt(ZMQ_SUBSCRIBE, 0, 0);
+    if (socketType_ == ZMQ_SUB)
+    {
+        socket_.setsockopt(ZMQ_SUBSCRIBE, 0, 0);
+    }
 
     isPaused_ = false;
     isRunning_ = true;

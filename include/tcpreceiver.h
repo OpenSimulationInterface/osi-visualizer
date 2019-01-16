@@ -21,7 +21,7 @@ class TCPReceiver : public QObject, public IMessageSource
 
     public:
 
-        TCPReceiver();
+        TCPReceiver(int type);
 
         signals:
             void Connected(DataType dataType);
@@ -43,6 +43,7 @@ class TCPReceiver : public QObject, public IMessageSource
         bool isRunning_;
         bool isThreadTerminated_;
 
+        int socketType_;
         std::string currentPort_;
         std::string currentEndpoint_;
         zmq::context_t context_;

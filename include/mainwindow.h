@@ -155,6 +155,11 @@ class MainWindow : public QMainWindow
         void ShowFOV();
         void ShowFOV2();
 
+        void CBZmqTypeChangeConnect1(const QString&);
+        void CBZmqTypeChangePlayback1(const QString&);
+
+        void CBZmqTypeChangeConnect2(const QString&);
+        void CBZmqTypeChangePlayback2(const QString&);
 
     private:
 
@@ -230,6 +235,11 @@ class MainWindow : public QMainWindow
         void EnableShowFOV(const bool enable);
         void EnableShowFOV2(const bool enable);
 
+        void DisconnectOsiReader(OsiReader* reader);
+        void ConnectOsiReader(OsiReader* reader);
+
+        void DisconnectTCPReceiver(TCPReceiver* receiver);
+        void ConnectTCPReceiver(TCPReceiver* receiver);
 
         // Configurations
         AppConfig config_;
@@ -277,5 +287,8 @@ class MainWindow : public QMainWindow
 
         DisplayObjectDialog* displayObjectDlg_;
         DisplayObjectDialog* displayObjectDlg2_;
+
+        const QString zmqPushPull_{"Push/Pull"};
+        const QString zmqPubSub_{"Pub/Sub"};
 };
 

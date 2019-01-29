@@ -147,6 +147,22 @@ MainWindow::LocalUpdate()
 
 MainWindow::~MainWindow()
 {
+    if (isConnected2_)
+    {
+        tcpReceiver2_->DisconnectRequested();
+    }
+    if (isConnected_)
+    {
+        tcpReceiver_->DisconnectRequested();
+    }
+    if (isPlayed_)
+    {
+        reader_->StopReadFile();
+    }
+    if (isPlayed2_)
+    {
+        reader2_->StopReadFile();
+    }
     // Call all deletes in reversed order!
     delete glWidget_;
     delete glWidget2_;
@@ -947,62 +963,6 @@ MainWindow::CBZmqTypeChangePlayback2(const QString& type)
 
     CONNECT_OSIREADER(2);
     UpdateGLWidgetMessageSource2();
-}
-
-void
-MainWindow::DisconnectOsiReader(OsiReader* reader)
-{
-    disconnect(this, &MainWindow::StartPlaybackRequested, reader, &OsiReader::StartReadFile);
-    disconnect(reader, &OsiReader::Connected, this, &MainWindow::Connected);
-    disconnect(reader, &OsiReader::Disconnected, this, &MainWindow::Disconnected);
-    disconnect(reader, &OsiReader::Connected, glWidget_, &GLWidget::Connected);
-    disconnect(reader, &OsiReader::Disconnected, glWidget_, &GLWidget::Disconnected);
-
-    disconnect(reader, &OsiReader::UpdateSliderRange, this, &MainWindow::UpdateSliderRange);
-    disconnect(reader, &OsiReader::UpdateSliderValue, this, &MainWindow::UpdateSliderValue);
-
-    disconnect(reader, &OsiReader::MessageSDSendout, osiparser_, &OsiParser::ParseReceivedSDMessage);
-    disconnect(reader, &OsiReader::MessageSVSendout, osiparser_, &OsiParser::ParseReceivedSVMessage);
-
-    disconnect(ui_->hSlider_, &QSlider::valueChanged, reader, &OsiReader::SliderValueChanged);
-}
-
-void
-MainWindow::ConnectOsiReader(OsiReader* reader)
-{
-    connect(this, &MainWindow::StartPlaybackRequested, reader, &OsiReader::StartReadFile, Qt::QueuedConnection);
-    connect(reader, &OsiReader::Connected, this, &MainWindow::Connected);
-    connect(reader, &OsiReader::Disconnected, this, &MainWindow::Disconnected);
-    connect(reader, &OsiReader::Connected, glWidget_, &GLWidget::Connected, Qt::DirectConnection);
-    connect(reader, &OsiReader::Disconnected, glWidget_, &GLWidget::Disconnected, Qt::DirectConnection);
-
-    connect(reader, &OsiReader::UpdateSliderRange, this, &MainWindow::UpdateSliderRange);
-    connect(reader, &OsiReader::UpdateSliderValue, this, &MainWindow::UpdateSliderValue);
-
-    connect(reader, &OsiReader::MessageSDSendout, osiparser_, &OsiParser::ParseReceivedSDMessage, Qt::QueuedConnection);
-    connect(reader, &OsiReader::MessageSVSendout, osiparser_, &OsiParser::ParseReceivedSVMessage, Qt::QueuedConnection);
-
-    connect(ui_->hSlider_, &QSlider::valueChanged, reader, &OsiReader::SliderValueChanged);
-}
-
-void
-MainWindow::DisconnectTCPReceiver(TCPReceiver* receiver)
-{
-
-}
-
-void
-MainWindow::ConnectTCPReceiver(TCPReceiver* receiver)
-{
-    connect(this, &MainWindow::ConnectRequested2, tcpReceiver2_, &TCPReceiver::ConnectRequested, Qt::QueuedConnection);
-    connect(receiver, &TCPReceiver::Connected, this, &MainWindow::Connected2);
-    connect(receiver, &TCPReceiver::Disconnected, this, &MainWindow::Disconnected2);
-    connect(receiver, &TCPReceiver::Connected, glWidget2_, &GLWidget::Connected, Qt::DirectConnection);
-    connect(receiver, &TCPReceiver::Disconnected, glWidget2_, &GLWidget::Disconnected, Qt::DirectConnection);
-
-    connect(receiver, &TCPReceiver::UpdateSliderTime, this, &MainWindow::UpdateSliderTime2);
-    connect(receiver, &TCPReceiver::MessageSDReceived, osiparser2_, &OsiParser::ParseReceivedSDMessage, Qt::QueuedConnection);
-    connect(receiver, &TCPReceiver::MessageSVReceived, osiparser2_, &OsiParser::ParseReceivedSVMessage, Qt::QueuedConnection);
 }
 
 void

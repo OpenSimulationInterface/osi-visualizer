@@ -235,12 +235,6 @@ class MainWindow : public QMainWindow
         void EnableShowFOV(const bool enable);
         void EnableShowFOV2(const bool enable);
 
-        void DisconnectOsiReader(OsiReader* reader);
-        void ConnectOsiReader(OsiReader* reader);
-
-        void DisconnectTCPReceiver(TCPReceiver* receiver);
-        void ConnectTCPReceiver(TCPReceiver* receiver);
-
         // Configurations
         AppConfig config_;
 

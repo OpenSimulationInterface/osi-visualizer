@@ -576,7 +576,11 @@ OsiReader::SetupConnection(bool enable)
     {
         if(zmqPublisher_.connected())
         {
-            errMsg = FreeZMQConnection();
+            isPaused_ = true;
+            if (isReadTerminated_)
+            {
+                errMsg = FreeZMQConnection();
+            }
         }
     }
 

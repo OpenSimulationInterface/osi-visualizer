@@ -1,101 +1,34 @@
-# osi-visualizer
+# OSI Visualizer
+[![Travis Build Status](https://travis-ci.org/OpenSimulationInterface/osi-visualizer.svg?branch=master)](https://travis-ci.org/OpenSimulationInterface/osi-visualizer)
 
-Visualization tool for OSI messages. This software serves as visualization tool for the current implementation of the [OSI (Open Simulation Interface)](https://github.com/OpenSimulationInterface/open-simulation-interface) mesages.The osi-visualizer supports to visualize the OSI GroundTruth and SensorData messages. It supports two independent visual channels with two different input types (file and network stream). 
+OSI Visualizer serves as visualization tool for the current implementation of [OSI (Open Simulation Interface)](https://github.com/OpenSimulationInterface/open-simulation-interface) messages. It visualizes the `GroundTruth`, `SensorView` and `SensorData` messages. It also supports two independent visual channels with two different input types (file and network stream). For more information see the documentation [here](https://opensimulationinterface.github.io/osi-documentation/osi-visualizer/README.html).
 
-<div align="center">
-  <img src="https://github.com/OpenSimulationInterface/osi-visualizer/tree/master/Resources/Images/Over_View.png"><br><br>
-</div>
+## Usage
 
-## General Information
+In the configuration panel at the right (see Screenshot below) load for channel 1 a scenario as a playback and choose a port to which it will send. In the panel below at channel 2 type in the host and the output port. Select the data type it will output (here `SensorData`). Make sure the appropriate communication server for data exchange is up and running. Now you can click on play for channel 1 and 2 and you can visualize the communication between these two channels.
 
-Some software library dependencies are needed to run the osi-visualizer:
+![](Resources/Images/Over_View.png)
 
-* cmake (version >= 3.5): https://cmake.org/
-* Qt (> 5.5.0): http://download.qt.io/official_releases/qt/
-* ZeroMQ (>4.2.1): http://zeromq.org/intro:get-the-software
-  The osi-visualizer needs to use ZeroMQ libraries to complete the socket communication between different sensor / traffic / scenario simulators. Note that the C++ Bindings are required as well.
-* protobuf 2.6.1: https://github.com/google/protobuf
-* FMILibrary 2.0.2: https://svn.jmodelica.org/FMILibrary/tags
+## Installation
 
-The required version of [Open Simulation Interface](https://github.com/OpenSimulationInterface/open-simulation-interface.git) is referenced as a git submodule, so be sure to run `git submodule init` && `git submodule update` after cloning the osi-visualizer repository.
-
-If the CMake build process does not automatically locate the required libraries, please use the usual CMake options to set the relevant CMake variables to the proper paths.
+#### Environment and dependencies
 
 Currently we strongly recommend users to use the osi-visualizer under Ubuntu Linux 16.04 LTS. You can see a working development environment based on Ubuntu 16.04 LTS in the Dockerfile in the repository.
 
-## Build
-### From Terminal:
-- cd ${SRC_DIRECTORY}
-- mkdir build
-- cd build
-- cmake ..
-- make
-- cp osi-visualizer ..
-- cd ..
-- ./osi-visualizer
+* [cmake](https://cmake.org/) (>= 3.5) 
+* [Qt](http://download.qt.io/official_releases/qt/) (>= 5.5.0)
+* [ZeroMQ](http://zeromq.org/intro:get-the-software) (>= 4.2.1) OSI Visualizer needs to use ZeroMQ libraries to complete the socket communication between different sensor / traffic / scenario simulators. Note that the C++ Bindings are required as well.
+* [protobuf](https://github.com/google/protobuf) (>= 2.6.1)
+* [FMILibrary](https://svn.jmodelica.org/FMILibrary/tags) (>= 2.0.2)
+* [OSI](https://github.com/OpenSimulationInterface/open-simulation-interface.git) (>= 3.1.2) 
 
-### From QtCreator:
-Open New Project -> CMakeLists.txt 
+#### Build and run
 
-## Usage 
-### Connection:
-The channel receives osi message from the network with specific IP address and Port number, and shows up different data types.
-
-<div align="center">
-  <img src="https://github.com/OpenSimulationInterface/osi-visualizer/tree/master/Resources/Images/Connection.png"><br><br>
-</div>
-
-### Playback:
-The channel receives osi message from the loaded file. The tool will check a header file of same name with a extension: .txth. If it doesn't exist, the tool will create one automatically for the first time.
-A "Delta-Delay" variable can be set to slow down the playback speed in case of very large message files. By default this value is "0" ms. 
-
-Example: set it to 10 ms, each message will have 10 ms more delay for playing.
-
-Besides the tool provides sending out osi message to network with specific port number.
-
-<div align="center">
-  <img src="https://github.com/OpenSimulationInterface/osi-visualizer/tree/master/Resources/Images/Playback.png"><br><br>
-</div>
-
-### Show Field of View:
-Show field of view for sensors, like Lidar, on the grid. User can set minimum range, maximum range, azimuth positive angle and azimuth negative angle.
-
-<div align="center">
-  <img src="https://github.com/OpenSimulationInterface/osi-visualizer/tree/master/Resources/Images/FOV.png"><br><br>
-</div>
-
-### Save OSI Message:
-Log or cut out part of the osi message stream and save it to another file. By default the threshold is 1000 osi messages. User can change this threshold in the config file.
-
-
-## Menu options
-### File Menu:
-`Play` -> play/pause Channel 1 by default.
-
-`Python Compare` -> A standalone compare tool to compare two osi message file directly. By default, it takes the playback file from these two channels. It supports flexible selecting random file as well. Just put the python scripts into folder: ./Resources/Python/ before start this tool. Then all the scripts will be shown up in the "Python Scripts" select menu. The compare script should take the two osi files' full path as arguments. The compare result can be exported to a text file by clicking the "Export" button. 
-
-`Quit` -> Quit the visualizer.
-
-### View Menu:
-`Combine Channels` -> Config two channels' "Play/Pause" simultaneously, or not. It can only be checked when the channels are at the same status: both "Play" or "Pause". By default, it is unchecked.
-
-`Show Grid` -> Show up the grid in the canvas. By default, it is checked.
-
-`Show Object details` -> Select object from the Objects Overview tree. Show up the selected object's position, velocity and acceleration in another independent dialog. By default, it is checked.
-
-The others are self-explaining.
-
-## Notice
-When playing large osi files, try to adapt the Delta Delay. Then the tool renders smoothly.
-
-
-## Run time screen shot
-Channel 1 plays an osi input file and sends out the osi message to port 5564 at the same time. 
-Channel 2 receives osi message from port 5564 and shows up on the canvas.
-
-<div align="center">
-  <img src="https://github.com/OpenSimulationInterface/osi-visualizer/tree/master/Resources/Images/Demo.png"><br><br>
-</div>
-
-
-
+```
+cd osi-visualizer
+mkdir build
+cd build
+cmake ..
+make
+./osi-visualizer
+```

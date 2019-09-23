@@ -17,7 +17,7 @@ Now you can click on play for channel 1 and 2 and you can visualize the communic
 
 #### Environment and dependencies
 
-Currently we strongly recommend users to use the osi-visualizer under Ubuntu Linux 16.04 LTS. You can see a working development environment based on Ubuntu 16.04 LTS in the Dockerfile in the repository.
+Currently we recommend users to use the osi-visualizer under Ubuntu Linux 18.04 LTS. You can see a working development environment based on Ubuntu 18.04 LTS in the Dockerfile in the repository.
 
 * [cmake](https://cmake.org/) (>= 3.5) 
 * [Qt](http://download.qt.io/official_releases/qt/) (>= 5.5.0)

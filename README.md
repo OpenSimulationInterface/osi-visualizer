@@ -28,7 +28,7 @@ Currently we recommend users to use the osi-visualizer under Ubuntu Linux 18.04 
 
 #### Build and run
 
-```
+```bash
 $ git clone https://github.com/OpenSimulationInterface/osi-visualizer.git
 $ cd osi-visualizer
 $ mkdir build

@@ -29,10 +29,11 @@ Currently we recommend users to use the osi-visualizer under Ubuntu Linux 18.04 
 #### Build and run
 
 ```
-cd osi-visualizer
-mkdir build
-cd build
-cmake ..
-make
-./osi-visualizer
+$ git clone https://github.com/OpenSimulationInterface/osi-visualizer.git
+$ cd osi-visualizer
+$ mkdir build
+$ cd build
+$ cmake ..
+$ make
+$ ./osi-visualizer
 ```

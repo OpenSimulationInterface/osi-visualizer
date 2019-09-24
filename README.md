@@ -5,11 +5,11 @@ OSI Visualizer serves as a visualization tool for the current implementation of 
 
 ## Usage
 
-Use the configuration panel at the right (see Screenshot below) to load a playback file or stream for channel 1 and choose a port to which it will be send. Enter the host and input port for channel 2 in the panel below. Select the data type it is expected to visualize (here `SensorData`). Make sure the appropriate communication server for the data exchange is up and running. 
+Use the configuration panel at the right (see Screenshot below) to load a playback file or stream for channel 1 at `Playback` and choose a port to which it will be send (here 5564). Select the data type `SensorView` accordingly. After that enter into the IP field the `localhost` and into the port field the receiving port (here 5563) for channel 2 in the panel below at `Connection`. Select the data type it is expected to visualize (here `SensorData`). Make sure the appropriate communication server for the data exchange is up and running with specification of the used ports. 
 
 ![](Resources/Images/Over_View.png)
 
-Now you can click on play for channel 1 and 2 and you can visualize the communication between these two channels. Channel 1 plays an OSI input file and sends out the OSI message to port 5564 at the same time. Channel 2 receives an OSI message from port 5564 showing it on the canvas (see demo screenshot below).
+Now you can click on play for channel 1 and 2 and you can visualize the communication between these two channels. Channel 1 plays the selected OSI input file scenario and sends out the OSI message to port 5564 at the same time. Channel 2 visualizes the received OSI messages at `localhost` at port 5563 showing it on the canvas (see demo screenshot below).
 
 ![](Resources/Images/Demo.png)
 

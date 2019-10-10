@@ -55,6 +55,7 @@ class OsiReader: public QObject, public IMessageSource
                   const bool& enableSendOut,
                   const std::string& pubPortNum,
                   const bool &enalbeFMU,
+                  int socketType,
                   const std::string &fmuPath = "");
 
         QString SetupConnection(bool enable);
@@ -124,6 +125,7 @@ class OsiReader: public QObject, public IMessageSource
         std::string     currentBuffer_;
 
         // ZMQ
+        int socketType_;
         zmq::context_t  zmqContext_;
         zmq::socket_t   zmqPublisher_;
 

@@ -60,6 +60,7 @@ OsiReader::OsiReader(int* deltaDelay,
                      const bool& enableSendOut,
                      const std::string& pubPortNum,
                      const bool& enalbeFMU,
+                     int socketType,
                      const std::string& fmuPath)
     : IMessageSource()
     , isRunning_(false)
@@ -79,8 +80,9 @@ OsiReader::OsiReader(int* deltaDelay,
     , enableSendOut_(enableSendOut)
     , pubPortNumber_(pubPortNum)
 
+    , socketType_(socketType)
     , zmqContext_(1)
-    , zmqPublisher_(zmqContext_, ZMQ_PUB)
+    , zmqPublisher_(zmqContext_, socketType)
 
     , enableFMU_(enalbeFMU)
     , fmu_(nullptr)
@@ -574,7 +576,11 @@ OsiReader::SetupConnection(bool enable)
     {
         if(zmqPublisher_.connected())
         {
-            errMsg = FreeZMQConnection();
+            isPaused_ = true;
+            if (isReadTerminated_)
+            {
+                errMsg = FreeZMQConnection();
+            }
         }
     }
 
@@ -587,7 +593,7 @@ OsiReader::SetZMQConnection()
     QString errMsg;
     if(!zmqPublisher_.connected())
     {
-        zmqPublisher_ = zmq::socket_t(zmqContext_, ZMQ_PUB);
+        zmqPublisher_ = zmq::socket_t(zmqContext_, socketType_);
         zmqPublisher_.setsockopt(ZMQ_LINGER, 100);
         try
         {

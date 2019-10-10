@@ -25,6 +25,27 @@
 #include <sstream>
 #include <iomanip>
 
+#define CONNECT_OSIREADER(number) \
+    connect(this, &MainWindow::StartPlaybackRequested##number, reader##number##_, &OsiReader::StartReadFile, Qt::QueuedConnection); \
+    connect(reader##number##_, &OsiReader::Connected, this, &MainWindow::Connected##number); \
+    connect(reader##number##_, &OsiReader::Disconnected, this, &MainWindow::Disconnected##number); \
+    connect(reader##number##_, &OsiReader::Connected, glWidget##number##_, &GLWidget::Connected, Qt::DirectConnection); \
+    connect(reader##number##_, &OsiReader::Disconnected, glWidget##number##_, &GLWidget::Disconnected, Qt::DirectConnection); \
+    connect(reader##number##_, &OsiReader::UpdateSliderRange, this, &MainWindow::UpdateSliderRange##number); \
+    connect(reader##number##_, &OsiReader::UpdateSliderValue, this, &MainWindow::UpdateSliderValue##number); \
+    connect(reader##number##_, &OsiReader::MessageSDSendout, osiparser##number##_, &OsiParser::ParseReceivedSDMessage, Qt::QueuedConnection); \
+    connect(reader##number##_, &OsiReader::MessageSVSendout, osiparser##number##_, &OsiParser::ParseReceivedSVMessage, Qt::QueuedConnection);\
+    connect(ui_->hSlider_##number, &QSlider::valueChanged, reader##number##_, &OsiReader::SliderValueChanged);
+
+#define CONNECT_TCP_RECEIVER(number) \
+    connect(this, &MainWindow::ConnectRequested##number, tcpReceiver##number##_, &TCPReceiver::ConnectRequested, Qt::QueuedConnection); \
+    connect(tcpReceiver##number##_, &TCPReceiver::Connected, this, &MainWindow::Connected##number); \
+    connect(tcpReceiver##number##_, &TCPReceiver::Disconnected, this, &MainWindow::Disconnected##number); \
+    connect(tcpReceiver##number##_, &TCPReceiver::Connected, glWidget##number##_, &GLWidget::Connected, Qt::DirectConnection); \
+    connect(tcpReceiver##number##_, &TCPReceiver::Disconnected, glWidget##number##_, &GLWidget::Disconnected, Qt::DirectConnection); \
+    connect(tcpReceiver##number##_, &TCPReceiver::UpdateSliderTime, this, &MainWindow::UpdateSliderTime##number); \
+    connect(tcpReceiver##number##_, &TCPReceiver::MessageSDReceived, osiparser##number##_, &OsiParser::ParseReceivedSDMessage, Qt::QueuedConnection); \
+    connect(tcpReceiver##number##_, &TCPReceiver::MessageSVReceived, osiparser##number##_, &OsiParser::ParseReceivedSVMessage, Qt::QueuedConnection);
 
 
 MainWindow::MainWindow(QWidget *parent)
@@ -47,15 +68,15 @@ MainWindow::MainWindow(QWidget *parent)
     , ui_(new Ui::MainWindow)
 
     , glWidget_(nullptr)
-    , tcpReceiver_(new TCPReceiver())
+    , tcpReceiver_(nullptr)
     , fmuReceiver_(new FMUReceiver())
-    , reader_(new OsiReader(&config_.ch1DeltaDelay_, config_.ch1EnableSendOut_, config_.ch1SendOutPortNum_.toStdString(), config_.ch1FMUTxCheck_, config_.ch1LoadFMUTx_.toStdString()))
+    , reader_(nullptr)
     , osiparser_(new OsiParser(config_))
 
     , glWidget2_(nullptr)
-    , tcpReceiver2_(new TCPReceiver())
+    , tcpReceiver2_(nullptr)
     , fmuReceiver2_(new FMUReceiver())
-    , reader2_(new OsiReader(&config_.ch2DeltaDelay_, config_.ch2EnableSendOut_, config_.ch2SendOutPortNum_.toStdString(), config_.ch2FMUTxCheck_, config_.ch2LoadFMUTx_.toStdString()))
+    , reader2_(nullptr)
     , osiparser2_(new OsiParser(config_))
 
     , colorWidgets_()
@@ -126,6 +147,22 @@ MainWindow::LocalUpdate()
 
 MainWindow::~MainWindow()
 {
+    if (isConnected2_)
+    {
+        tcpReceiver2_->DisconnectRequested();
+    }
+    if (isConnected_)
+    {
+        tcpReceiver_->DisconnectRequested();
+    }
+    if (isPlayed_)
+    {
+        reader_->StopReadFile();
+    }
+    if (isPlayed2_)
+    {
+        reader2_->StopReadFile();
+    }
     // Call all deletes in reversed order!
     delete glWidget_;
     delete glWidget2_;
@@ -464,6 +501,8 @@ MainWindow::PlayPauseButtonClicked()
         LocalPlayPause2();
 
     UpdateCombineChannelMenu();
+    ui_->zmq_type_connect_1->setEnabled(false);
+    ui_->zmq_type_playback_1->setEnabled(false);
 }
 
 void
@@ -499,9 +538,9 @@ MainWindow::LocalPlayPause()
                 Stop();
                 Play();
 
-                ui_->hSlider->blockSignals(true);
-                ui_->hSlider->setValue(0);
-                ui_->hSlider->blockSignals(false);
+                ui_->hSlider_->blockSignals(true);
+                ui_->hSlider_->setValue(0);
+                ui_->hSlider_->blockSignals(false);
             }
             else
             {
@@ -521,6 +560,8 @@ MainWindow::PlayPauseButtonClicked2()
         LocalPlayPause();
 
     UpdateCombineChannelMenu();
+    ui_->zmq_type_connect_2->setEnabled(false);
+    ui_->zmq_type_playback_2->setEnabled(false);
 }
 
 void
@@ -745,24 +786,7 @@ MainWindow::ConnectSignalsToSlots()
     connect(ui_->playPauseButton,   &QToolButton::clicked, this, &MainWindow::PlayPauseButtonClicked);
     connect(ui_->playPauseButton_2, &QToolButton::clicked, this, &MainWindow::PlayPauseButtonClicked2);
 
-    // signals and slots related to connection status
-    // If not queued, this signal will block the GUI. Same applies for Connect/Disconnect in TCPReceiver.
-    connect(this, &MainWindow::ConnectRequested, tcpReceiver_, &TCPReceiver::ConnectRequested, Qt::QueuedConnection);
-    connect(tcpReceiver_, &TCPReceiver::Connected, this, &MainWindow::Connected);
-    connect(tcpReceiver_, &TCPReceiver::Disconnected, this, &MainWindow::Disconnected);
-    connect(tcpReceiver_, &TCPReceiver::Connected, glWidget_, &GLWidget::Connected, Qt::DirectConnection);
-    connect(tcpReceiver_, &TCPReceiver::Disconnected, glWidget_, &GLWidget::Disconnected, Qt::DirectConnection);
-
-    connect(tcpReceiver_, &TCPReceiver::UpdateSliderTime, this, &MainWindow::UpdateSliderTime);
-
-    connect(this, &MainWindow::ConnectRequested2, tcpReceiver2_, &TCPReceiver::ConnectRequested, Qt::QueuedConnection);
-    connect(tcpReceiver2_, &TCPReceiver::Connected, this, &MainWindow::Connected2);
-    connect(tcpReceiver2_, &TCPReceiver::Disconnected, this, &MainWindow::Disconnected2);
-    connect(tcpReceiver2_, &TCPReceiver::Connected, glWidget2_, &GLWidget::Connected, Qt::DirectConnection);
-    connect(tcpReceiver2_, &TCPReceiver::Disconnected, glWidget2_, &GLWidget::Disconnected, Qt::DirectConnection);
-
-    connect(tcpReceiver2_, &TCPReceiver::UpdateSliderTime, this, &MainWindow::UpdateSliderTime2);
-
+    // Signals and slots related to connection status of FMU
     connect(this, &MainWindow::FMUConnectRequested, fmuReceiver_, &FMUReceiver::ConnectRequested, Qt::QueuedConnection);
     connect(fmuReceiver_, &FMUReceiver::Connected, this, &MainWindow::Connected);
     connect(fmuReceiver_, &FMUReceiver::Disconnected, this, &MainWindow::Disconnected);
@@ -776,42 +800,12 @@ MainWindow::ConnectSignalsToSlots()
     connect(fmuReceiver2_, &FMUReceiver::Disconnected, this, &MainWindow::Disconnected2);
     connect(fmuReceiver2_, &FMUReceiver::Connected, glWidget2_, &GLWidget::Connected, Qt::DirectConnection);
     connect(fmuReceiver2_, &FMUReceiver::Disconnected, glWidget2_, &GLWidget::Disconnected, Qt::DirectConnection);
-
     connect(fmuReceiver2_, &FMUReceiver::UpdateSliderTime, this, &MainWindow::UpdateSliderTime2);
-
-    connect(this, &MainWindow::StartPlaybackRequested, reader_, &OsiReader::StartReadFile, Qt::QueuedConnection);
-    connect(reader_, &OsiReader::Connected, this, &MainWindow::Connected);
-    connect(reader_, &OsiReader::Disconnected, this, &MainWindow::Disconnected);
-    connect(reader_, &OsiReader::Connected, glWidget_, &GLWidget::Connected, Qt::DirectConnection);
-    connect(reader_, &OsiReader::Disconnected, glWidget_, &GLWidget::Disconnected, Qt::DirectConnection);
-
-    connect(reader_, &OsiReader::UpdateSliderRange, this, &MainWindow::UpdateSliderRange);
-    connect(reader_, &OsiReader::UpdateSliderValue, this, &MainWindow::UpdateSliderValue);
-
-    connect(this, &MainWindow::StartPlaybackRequested2, reader2_, &OsiReader::StartReadFile, Qt::QueuedConnection);
-    connect(reader2_, &OsiReader::Connected, this, &MainWindow::Connected2);
-    connect(reader2_, &OsiReader::Disconnected, this, &MainWindow::Disconnected2);
-    connect(reader2_, &OsiReader::Connected, glWidget2_, &GLWidget::Connected, Qt::DirectConnection);
-    connect(reader2_, &OsiReader::Disconnected, glWidget2_, &GLWidget::Disconnected, Qt::DirectConnection);
-
-    connect(reader2_, &OsiReader::UpdateSliderRange, this, &MainWindow::UpdateSliderRange2);
-    connect(reader2_, &OsiReader::UpdateSliderValue, this, &MainWindow::UpdateSliderValue2);
-
-    //Main loop: receive(read) -> parse -> update objects
-    connect(tcpReceiver_, &TCPReceiver::MessageSDReceived, osiparser_, &OsiParser::ParseReceivedSDMessage, Qt::QueuedConnection);
-    connect(tcpReceiver_, &TCPReceiver::MessageSVReceived, osiparser_, &OsiParser::ParseReceivedSVMessage, Qt::QueuedConnection);
-    connect(tcpReceiver2_, &TCPReceiver::MessageSDReceived, osiparser2_, &OsiParser::ParseReceivedSDMessage, Qt::QueuedConnection);
-    connect(tcpReceiver2_, &TCPReceiver::MessageSVReceived, osiparser2_, &OsiParser::ParseReceivedSVMessage, Qt::QueuedConnection);
 
     connect(fmuReceiver_, &FMUReceiver::MessageSDReceived, osiparser_, &OsiParser::ParseReceivedSDMessage, Qt::QueuedConnection);
     connect(fmuReceiver_, &FMUReceiver::MessageSVReceived, osiparser_, &OsiParser::ParseReceivedSVMessage, Qt::QueuedConnection);
     connect(fmuReceiver2_, &FMUReceiver::MessageSDReceived, osiparser2_, &OsiParser::ParseReceivedSDMessage, Qt::QueuedConnection);
     connect(fmuReceiver2_, &FMUReceiver::MessageSVReceived, osiparser2_, &OsiParser::ParseReceivedSVMessage, Qt::QueuedConnection);
-
-    connect(reader_, &OsiReader::MessageSDSendout, osiparser_, &OsiParser::ParseReceivedSDMessage, Qt::QueuedConnection);
-    connect(reader_, &OsiReader::MessageSVSendout, osiparser_, &OsiParser::ParseReceivedSVMessage, Qt::QueuedConnection);
-    connect(reader2_, &OsiReader::MessageSDSendout, osiparser2_, &OsiParser::ParseReceivedSDMessage, Qt::QueuedConnection);
-    connect(reader2_, &OsiReader::MessageSVSendout, osiparser2_, &OsiParser::ParseReceivedSVMessage, Qt::QueuedConnection);
 
     connect(osiparser_, &OsiParser::MessageParsed, glWidget_, &GLWidget::MessageParsed, Qt::QueuedConnection);
     connect(osiparser2_, &OsiParser::MessageParsed, glWidget2_, &GLWidget::MessageParsed, Qt::QueuedConnection);
@@ -836,10 +830,6 @@ MainWindow::ConnectSignalsToSlots()
     connect(ui_->objectTree_2, &QTreeWidget::itemClicked, glWidget2_, &GLWidget::TreeItemClicked);
     connect(ui_->objectTree_2, &QTreeWidget::itemChanged, glWidget2_, &GLWidget::TreeItemChanged);
     connect(ui_->objectTree_2, &QTreeWidget::itemClicked, this, &MainWindow::ConnectDisplayObjectInformation2);
-
-    // slider
-    connect(ui_->hSlider, &QSlider::valueChanged, reader_, &OsiReader::SliderValueChanged);
-    connect(ui_->hSlider_2, &QSlider::valueChanged, reader2_, &OsiReader::SliderValueChanged);
 
     //Tracking
     connect(glWidget_, &GLWidget::SetTrackingEnabled, this, &MainWindow::SetTrackingEnabled);
@@ -882,6 +872,97 @@ MainWindow::ConnectSignalsToSlots()
     connect(ui_->dataType_2, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &MainWindow::CBDataTypeCon2);
     connect(ui_->playbackDataType_2, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &MainWindow::CBDataTypePlay2);
 
+    // ZMQ communication type (push/pull or pub/sub) connection
+    connect(ui_->zmq_type_connect_1, static_cast<void (QComboBox::*)(const QString&)>(&QComboBox::currentIndexChanged), this, &MainWindow::CBZmqTypeChangeConnect1);
+    connect(ui_->zmq_type_playback_1, static_cast<void (QComboBox::*)(const QString&)>(&QComboBox::currentIndexChanged), this, &MainWindow::CBZmqTypeChangePlayback1);
+
+    connect(ui_->zmq_type_connect_2, static_cast<void (QComboBox::*)(const QString&)>(&QComboBox::currentIndexChanged), this, &MainWindow::CBZmqTypeChangeConnect2);
+    connect(ui_->zmq_type_playback_2, static_cast<void (QComboBox::*)(const QString&)>(&QComboBox::currentIndexChanged), this, &MainWindow::CBZmqTypeChangePlayback2);
+}
+
+void
+MainWindow::CBZmqTypeChangeConnect1(const QString& type)
+{
+    if (tcpReceiver_ != nullptr)
+    {
+        delete tcpReceiver_;
+    }
+
+    if (type == "Push/Pull")
+    {
+        tcpReceiver_ = new TCPReceiver{ZMQ_PULL};
+    }
+    else if (type == "Pub/Sub")
+    {
+        tcpReceiver_ = new TCPReceiver{ZMQ_SUB};
+    }
+
+    CONNECT_TCP_RECEIVER();
+    UpdateGLWidgetMessageSource();
+}
+
+void
+MainWindow::CBZmqTypeChangePlayback1(const QString& type)
+{
+    if (reader_ != nullptr)
+    {
+        delete reader_;
+        reader_ = nullptr;
+    }
+
+    if (type == "Push/Pull")
+    {
+        reader_ = new OsiReader(&config_.ch1DeltaDelay_, config_.ch1EnableSendOut_, config_.ch1SendOutPortNum_.toStdString(), config_.ch1FMUTxCheck_, ZMQ_PUSH, config_.ch1LoadFMUTx_.toStdString());
+    }
+    else if (type == "Pub/Sub")
+    {
+        reader_ = new OsiReader(&config_.ch1DeltaDelay_, config_.ch1EnableSendOut_, config_.ch1SendOutPortNum_.toStdString(), config_.ch1FMUTxCheck_, ZMQ_PUB, config_.ch1LoadFMUTx_.toStdString());
+    }
+
+    CONNECT_OSIREADER();
+    UpdateGLWidgetMessageSource();
+}
+
+void
+MainWindow::CBZmqTypeChangeConnect2(const QString& type)
+{
+    if (tcpReceiver2_ != nullptr)
+    {
+        delete tcpReceiver2_;
+    }
+
+    if (type == "Push/Pull")
+    {
+        tcpReceiver2_ = new TCPReceiver{ZMQ_PULL};
+    }
+    else if (type == "Pub/Sub")
+    {
+        tcpReceiver2_ = new TCPReceiver{ZMQ_SUB};
+    }
+
+    CONNECT_TCP_RECEIVER(2);
+    UpdateGLWidgetMessageSource2();
+}
+
+void
+MainWindow::CBZmqTypeChangePlayback2(const QString& type)
+{
+    if (reader2_ != nullptr)
+    {
+        delete reader2_;
+        reader2_ = nullptr;
+    }
+    if (type == "Push/Pull")
+    {
+        reader2_ = new OsiReader(&config_.ch2DeltaDelay_, config_.ch2EnableSendOut_, config_.ch2SendOutPortNum_.toStdString(), config_.ch2FMUTxCheck_, ZMQ_PUSH, config_.ch2LoadFMUTx_.toStdString());
+    }
+    else if (type == "Pub/Sub")
+    {
+        reader2_ = new OsiReader(&config_.ch2DeltaDelay_, config_.ch2EnableSendOut_, config_.ch2SendOutPortNum_.toStdString(), config_.ch2FMUTxCheck_, ZMQ_PUB, config_.ch2LoadFMUTx_.toStdString());
+    }
+
+    CONNECT_OSIREADER(2);
+    UpdateGLWidgetMessageSource2();
 }
 
 void
@@ -1013,7 +1094,7 @@ MainWindow::EnablePlaybackGroup2(bool enable)
 void
 MainWindow::EnableSlider(bool enable)
 {
-    ui_->hSlider->setEnabled(enable);
+    ui_->hSlider_->setEnabled(enable);
 }
 
 void
@@ -1435,6 +1516,18 @@ MainWindow::InitComboBoxes()
     ui_->playbackDataType->addItem("SensorData");
     ui_->playbackDataType_2->addItem("SensorView");
     ui_->playbackDataType_2->addItem("SensorData");
+
+    ui_->zmq_type_connect_1->addItem(zmqPushPull_);
+    ui_->zmq_type_connect_1->addItem("Pub/Sub");
+
+    ui_->zmq_type_playback_1->addItem(zmqPushPull_);
+    ui_->zmq_type_playback_1->addItem("Pub/Sub");
+
+    ui_->zmq_type_connect_2->addItem(zmqPushPull_);
+    ui_->zmq_type_connect_2->addItem("Pub/Sub");
+
+    ui_->zmq_type_playback_2->addItem(zmqPushPull_);
+    ui_->zmq_type_playback_2->addItem("Pub/Sub");
 }
 
 void
@@ -2026,7 +2119,7 @@ MainWindow::GetStringFromMilliSecond(int milliSec)
 void
 MainWindow::UpdateSliderRange(int sliderRange)
 {
-    ui_->hSlider->setRange(0, sliderRange);
+    ui_->hSlider_->setRange(0, sliderRange);
     ui_->hSliderTimeRange->setText(GetStringFromMilliSecond(sliderRange));
 }
 
@@ -2040,9 +2133,9 @@ MainWindow::UpdateSliderRange2(int sliderRange)
 void
 MainWindow::UpdateSliderValue(int sliderValue)
 {
-    ui_->hSlider->blockSignals(true);
-    ui_->hSlider->setValue(sliderValue);
-    ui_->hSlider->blockSignals(false);
+    ui_->hSlider_->blockSignals(true);
+    ui_->hSlider_->setValue(sliderValue);
+    ui_->hSlider_->blockSignals(false);
     UpdateSliderTime(sliderValue);
 }
 

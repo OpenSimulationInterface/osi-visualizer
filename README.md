@@ -27,13 +27,19 @@ Currently we recommend users to use the osi-visualizer under Ubuntu Linux 18.04 
 * [OSI](https://github.com/OpenSimulationInterface/open-simulation-interface.git) (>= 3.1.2) 
 
 #### Build and run
+```bash
+$ bash install.sh
+```
+
+or just manually if dependecies are already installed:
 
 ```bash
 $ git clone https://github.com/OpenSimulationInterface/osi-visualizer.git
 $ cd osi-visualizer
+$ git clone https://github.com/OpenSimulationInterface/open-simulation-interface
 $ mkdir build
 $ cd build
 $ cmake ..
-$ make
+$ make -j8
 $ ./osi-visualizer
 ```

@@ -34,7 +34,7 @@ class GLObject
 
         void SetText(QString text);
 
-        void SetTexture(QImage image, bool generateMipMaps);
+        void SetTexture(QImage image, bool generateMipMaps, GLint wrapping = GL_REPEAT);
 
         void SetColor(QColor color) { color_ = color; }
         QColor GetColor() const { return color_; }

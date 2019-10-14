@@ -4,30 +4,28 @@
 ///
 /// @brief
 ///
-
-#pragma once
+#ifndef OSI_VISUALIZER_TYPES_H
+#define OSI_VISUALIZER_TYPES_H
 
 #include "osi_common.pb.h"
-#include <QVector>
 #include <QVector3D>
-
+#include <QVector>
 
 #include <memory>
 
-
-enum class DataType: int
+enum class DataType : int
 {
     SensorView = 0,
     SensorData
 };
 
-enum class LaneType: int
+enum class LaneType : int
 {
     BoundaryLanes = 0,
     CenterLanes
 };
 
-enum class ObjectType: int
+enum class ObjectType : int
 {
     UnknownObject = 0,
     OtherObject,
@@ -63,7 +61,6 @@ struct MessageStruct
 };
 using Message = QVector<MessageStruct>;
 
-
 struct LaneStruct
 {
     int id;
@@ -71,5 +68,4 @@ struct LaneStruct
     QVector<QVector<QVector3D> > boundaryLanes;
 };
 using LaneMessage = QVector<LaneStruct>;
-
-
+#endif  // OSI_VISUALIZER_TYPES_H

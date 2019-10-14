@@ -1,45 +1,42 @@
 #define _USE_MATH_DEFINES
 
 #include "globject.h"
-#include <QOpenGLBuffer>
-#include <QMatrix4x4>
-#include <QPainter>
-#include <QBitmap>
 #include <math.h>
+#include <QBitmap>
+#include <QMatrix4x4>
+#include <QOpenGLBuffer>
+#include <QPainter>
 
-GLObject::GLObject(GLenum primitiveType,
-                   QOpenGLFunctions_4_3_Core* functions,
-                   QString id,
-                   GLenum drawType)
-    : id_(id)
-    , vaoId_()
-    , textureId_(-1)
-    , text_()
-    , halfSize_()
-    , isVisible_(true)
-    , forceInvisible_(false)
-    , alreadyInObjectTree_(false)
-    , modelMatrix_()
-    , vertices_()
-    , texCoords_()
-    , velocity_()
-    , acceleration_()
-    , realPosition_()
+GLObject::GLObject(GLenum primitiveType, QOpenGLFunctions_4_3_Core* functions, QString id, GLenum drawType)
+    : id_(id),
+      vaoId_(),
+      textureId_(-1),
+      text_(),
+      halfSize_(),
+      isVisible_(true),
+      forceInvisible_(false),
+      alreadyInObjectTree_(false),
+      modelMatrix_(),
+      vertices_(),
+      texCoords_(),
+      velocity_(),
+      acceleration_(),
+      realPosition_()
 
-    , vboId_()
-    , vboTexCoordId_()
-    , color_()
-    , drawType_(drawType)
-    , orientation_(0)
-    , position_()
-    , primitiveType_(primitiveType)
-    , textObject_(nullptr)
-    , isInitialized_(false)
-    , lastVertexSize_(-1)
-    , objectType_(ObjectType::None)
-    , functions_(functions)
+      ,
+      vboId_(),
+      vboTexCoordId_(),
+      color_(),
+      drawType_(drawType),
+      orientation_(0),
+      position_(),
+      primitiveType_(primitiveType),
+      textObject_(nullptr),
+      isInitialized_(false),
+      lastVertexSize_(-1),
+      objectType_(ObjectType::None),
+      functions_(functions)
 {
-
 }
 
 GLObject::~GLObject()
@@ -57,8 +54,7 @@ GLObject::~GLObject()
 
 // Qt provides classes like QVertexArrayObject, for example.
 // However, they caused unexpected behaviour, thus plain OpenGL commands are used.
-void
-GLObject::Init()
+void GLObject::Init()
 {
     if (isInitialized_)
     {
@@ -88,8 +84,7 @@ GLObject::Init()
     isInitialized_ = true;
 }
 
-void
-GLObject::UpdateVertexBuffer()
+void GLObject::UpdateVertexBuffer()
 {
     int elementSize = 3;
     int sizeInBytes = elementSize * vertices_.size() * sizeof(float);
@@ -107,8 +102,7 @@ GLObject::UpdateVertexBuffer()
     }
 }
 
-void
-GLObject::SetText(QString text)
+void GLObject::SetText(QString text)
 {
     text_ = text;
     QFont font("Arial", 100);
@@ -130,15 +124,10 @@ GLObject::SetText(QString text)
     float halfWidth = halfLength * pixelSize.width() / pixelSize.height();
 
     textObject_ = std::make_shared<GLObject>(GL_QUADS, functions_);
-    textObject_->vertices_ << QVector3D(-halfLength, 0, halfWidth)
-                           << QVector3D(halfLength, 0, halfWidth)
-                           << QVector3D(halfLength, 0, -halfWidth)
-                           << QVector3D(-halfLength, 0, -halfWidth);
+    textObject_->vertices_ << QVector3D(-halfLength, 0, halfWidth) << QVector3D(halfLength, 0, halfWidth)
+                           << QVector3D(halfLength, 0, -halfWidth) << QVector3D(-halfLength, 0, -halfWidth);
 
-    textObject_->texCoords_ << QVector2D(1, 1)
-                            << QVector2D(1, 0)
-                            << QVector2D(0, 0)
-                            << QVector2D(0, 1);
+    textObject_->texCoords_ << QVector2D(1, 1) << QVector2D(1, 0) << QVector2D(0, 0) << QVector2D(0, 1);
 
     textObject_->Init();
 
@@ -149,8 +138,7 @@ GLObject::SetText(QString text)
     textObject_->SetTexture(image, false);
 }
 
-void
-GLObject::SetTexture(QImage image, bool generateMipMaps)
+void GLObject::SetTexture(QImage image, bool generateMipMaps)
 {
     if (textureId_ > -1)
     {
@@ -160,9 +148,8 @@ GLObject::SetTexture(QImage image, bool generateMipMaps)
     // glActiveTexture not needed atm
     functions_->glGenTextures(1, &textureId_);
     functions_->glBindTexture(GL_TEXTURE_2D, textureId_);
-    functions_->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
-                             image.width(), image.height(), 0,
-                             GL_RGBA, GL_UNSIGNED_BYTE, image.bits());
+    functions_->glTexImage2D(
+        GL_TEXTURE_2D, 0, GL_RGBA, image.width(), image.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, image.bits());
     functions_->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     functions_->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
@@ -183,41 +170,35 @@ GLObject::SetTexture(QImage image, bool generateMipMaps)
     image.detach();
 }
 
-void
-GLObject::SetPosition(float x, float y, float z, bool updateMatrix)
+void GLObject::SetPosition(float x, float y, float z, bool updateMatrix)
 {
     SetPosition(QVector3D(x, y, z), updateMatrix);
 }
 
-void
-GLObject::SetPosition(QVector3D position, bool updateMatrix)
+void GLObject::SetPosition(QVector3D position, bool updateMatrix)
 {
     position_ = position;
     Update(updateMatrix);
 }
 
-void
-GLObject::SetOrientation(float orientation, bool updateMatrix)
+void GLObject::SetOrientation(float orientation, bool updateMatrix)
 {
     orientation_ = orientation;
     Update(updateMatrix);
 }
 
-void
-GLObject::Translate(float x, float y, float z, bool updateMatrix)
+void GLObject::Translate(float x, float y, float z, bool updateMatrix)
 {
     Translate(QVector3D(x, y, z), updateMatrix);
 }
 
-void
-GLObject::Translate(QVector3D translation, bool updateMatrix)
+void GLObject::Translate(QVector3D translation, bool updateMatrix)
 {
     position_ += translation;
     Update(updateMatrix);
 }
 
-void
-GLObject::RotateAroundYAxis(float rotation, bool updateMatrix)
+void GLObject::RotateAroundYAxis(float rotation, bool updateMatrix)
 {
     orientation_ += rotation;
     orientation_ = fmod(orientation_, 2 * M_PI);
@@ -231,12 +212,12 @@ void GLObject::Update(bool updateMatrix)
         return;
     }
 
-    //double cosr = 1;
-    //double sinr = 0;
+    // double cosr = 1;
+    // double sinr = 0;
     double cosp = cos(orientation_);
     double sinp = sin(orientation_);
-    //double cosy = 1;
-    //double siny = 0;
+    // double cosy = 1;
+    // double siny = 0;
 
     // TODO: Why has QMatrix3x3 not the same constructor?
     // (QMatrix3x3 derives from QGenericMatrix, 4x4 does not)
@@ -247,10 +228,7 @@ void GLObject::Update(bool updateMatrix)
                     0, 0, 0, 1);
     */
 
-    QMatrix4x4 rotY(cosp, 0, sinp, 0,
-                    0, 1, 0, 0,
-                    -sinp, 0, cosp, 0,
-                    0, 0, 0, 1);
+    QMatrix4x4 rotY(cosp, 0, sinp, 0, 0, 1, 0, 0, -sinp, 0, cosp, 0, 0, 0, 0, 1);
 
     /*
     QMatrix4x4 rotZ(cosy, -siny, 0, 0,
@@ -260,14 +238,25 @@ void GLObject::Update(bool updateMatrix)
     */
 
     // TODO: Correct order? Is this pre or post multiply?
-    QMatrix4x4 rotMatrix = rotY;// rotX * rotY * rotZ;
+    QMatrix4x4 rotMatrix = rotY;  // rotX * rotY * rotZ;
 
     // TODO: Will this cause a memory leak?
-    modelMatrix_ = QMatrix4x4(rotMatrix(0, 0), rotMatrix(0, 1), rotMatrix(0, 2), position_.x(),
-                              rotMatrix(1, 0), rotMatrix(1, 1), rotMatrix(1, 2), position_.y(),
-                              rotMatrix(2, 0), rotMatrix(2, 1), rotMatrix(2, 2), position_.z(),
-                              0, 0, 0, 1);
+    modelMatrix_ = QMatrix4x4(rotMatrix(0, 0),
+                              rotMatrix(0, 1),
+                              rotMatrix(0, 2),
+                              position_.x(),
+                              rotMatrix(1, 0),
+                              rotMatrix(1, 1),
+                              rotMatrix(1, 2),
+                              position_.y(),
+                              rotMatrix(2, 0),
+                              rotMatrix(2, 1),
+                              rotMatrix(2, 2),
+                              position_.z(),
+                              0,
+                              0,
+                              0,
+                              1);
 
-    //modelMatrix = tempModelMatrix;
+    // modelMatrix = tempModelMatrix;
 }
-

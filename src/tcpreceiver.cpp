@@ -2,7 +2,6 @@
 #include "utils.h"
 #include <QThread>
 
-
 /*
  *
  * The constructor initializes the ZMQ context
@@ -12,29 +11,26 @@
 TCPReceiver::TCPReceiver(int type)
     : IMessageSource()
 
-    , isRunning_(false)
-    , isThreadTerminated_(false)
-    , socketType_(type)
-    , currentPort_("")
-    , currentEndpoint_("")
-    , context_(1)
-    , socket_(context_, type)
-    , currentDataType_(DataType::SensorView)
+      ,
+      isRunning_(false),
+      isThreadTerminated_(false),
+      socketType_(type),
+      currentPort_(""),
+      currentEndpoint_(""),
+      context_(1),
+      socket_(context_, type),
+      currentDataType_(DataType::SensorView)
 {
     // Disable buffering
     socket_.setsockopt(ZMQ_CONFLATE, 1);
 
     int a, b, c;
     zmq::version(&a, &b, &c);
-    qDebug() << "ZMQ version: " + QString::number(a) + "."
-             + QString::number(b) + "." + QString::number(c);
+    qDebug() << "ZMQ version: " + QString::number(a) + "." + QString::number(b) + "." + QString::number(c);
 }
 
 // This function is called when the user presses the connect button
-void
-TCPReceiver::ConnectRequested(const QString &ipAddress,
-                              const QString &port,
-                              DataType dataType)
+void TCPReceiver::ConnectRequested(const QString& ipAddress, const QString& port, DataType dataType)
 {
     currentDataType_ = dataType;
     currentPort_ = port.toStdString();
@@ -66,8 +62,7 @@ TCPReceiver::ConnectRequested(const QString &ipAddress,
 }
 
 // This function is called when the user presses the disconnect button
-void
-TCPReceiver::DisconnectRequested()
+void TCPReceiver::DisconnectRequested()
 {
     if (!isConnected_)
     {
@@ -103,8 +98,7 @@ TCPReceiver::DisconnectRequested()
  * In this case, the received data will be parsed to SensorData,
  * and a signal with the last received SensorData buffer is emitted.
  */
-void
-TCPReceiver::ReceiveLoop()
+void TCPReceiver::ReceiveLoop()
 {
     while (isRunning_)
     {
@@ -131,10 +125,10 @@ TCPReceiver::ReceiveLoop()
             {
                 msgReceived = true;
 
-                if(currentDataType_ == DataType::SensorView)
+                if (currentDataType_ == DataType::SensorView)
                 {
                     osi3::SensorView sv;
-                    if(sv.ParseFromArray(message.data(),(int)message.size()))
+                    if (sv.ParseFromArray(message.data(), (int)message.size()))
                     {
                         uint64_t curStamp = ::GetTimeStampInNanoSecond<osi3::SensorView>(sv);
                         emit MessageSVReceived(sv);
@@ -146,10 +140,10 @@ TCPReceiver::ReceiveLoop()
                         qDebug() << "SensorView receiving error";
                     }
                 }
-                else //if(currentDataType_ == DataType::SensorData)
+                else  // if(currentDataType_ == DataType::SensorData)
                 {
                     osi3::SensorData sd;
-                    if(sd.ParseFromArray(message.data(),(int)message.size()))
+                    if (sd.ParseFromArray(message.data(), (int)message.size()))
                     {
                         uint64_t curStamp = ::GetTimeStampInNanoSecond<osi3::SensorData>(sd);
                         emit MessageSDReceived(sd);
@@ -172,5 +166,3 @@ TCPReceiver::ReceiveLoop()
 
     isThreadTerminated_ = true;
 }
-
-

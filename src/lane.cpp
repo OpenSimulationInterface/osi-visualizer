@@ -1,25 +1,19 @@
 #include "lane.h"
 
-Lane::Lane(int id,
-           const QVector<QVector<QVector3D> >& laneMarkings,
-           QOpenGLFunctions_4_3_Core* functions)
-    : laneId_(id)
-    , isVisible_(true)
-    , glLaneMarkings_()
-    , functions_(functions)
+Lane::Lane(int id, const QVector<QVector<QVector3D> >& laneMarkings, QOpenGLFunctions_4_3_Core* functions)
+    : laneId_(id), isVisible_(true), glLaneMarkings_(), functions_(functions)
 {
-    for (const auto& laneMarkers: laneMarkings)
+    for (const auto& laneMarkers : laneMarkings)
     {
         AddLaneMarking(laneMarkers);
     }
 }
 
-void
-Lane::UpdateLaneMarkings(const QVector<QVector<QVector3D> >& laneMarkings)
+void Lane::UpdateLaneMarkings(const QVector<QVector<QVector3D> >& laneMarkings)
 {
     QVector<GLLaneMarking*> candidates(glLaneMarkings_);
 
-    for (const auto& laneMarkers: laneMarkings)
+    for (const auto& laneMarkers : laneMarkings)
     {
         GLLaneMarking* candidate = nullptr;
 
@@ -41,14 +35,14 @@ Lane::UpdateLaneMarkings(const QVector<QVector<QVector3D> >& laneMarkings)
             // TODO: Free the memory currently occupied by candidate->vertices?
             candidate->vertices_ = laneMarkers;
             candidate->UpdateVertexBuffer();
-            //qDebug() << "Updating buffer";
+            // qDebug() << "Updating buffer";
 
             candidate->isVisible_ = true;
             candidates.removeOne(candidate);
         }
         else
         {
-            //qDebug() << "New buffer";
+            // qDebug() << "New buffer";
             AddLaneMarking(laneMarkers);
         }
     }
@@ -61,12 +55,10 @@ Lane::UpdateLaneMarkings(const QVector<QVector<QVector3D> >& laneMarkings)
     }
 }
 
-void
-Lane::AddLaneMarking(const QVector<QVector3D>& laneMarkers)
+void Lane::AddLaneMarking(const QVector<QVector3D>& laneMarkers)
 {
     GLLaneMarking* marking = new GLLaneMarking(functions_, laneMarkers);
     marking->Init();
     marking->SetColor(Qt::white);
     glLaneMarkings_.append(marking);
 }
-

@@ -1,21 +1,22 @@
 #define _USE_MATH_DEFINES
 
-#include <math.h>
 #include "camera.h"
+#include <math.h>
 
 Camera::Camera(CameraPerspective perspective)
-    : viewMatrix_()
-    , trackedObject_(nullptr)
-    , resetPosition_()
+    : viewMatrix_(),
+      trackedObject_(nullptr),
+      resetPosition_()
 
-    , minY_(1)
-    , orientation_(0)
-    , position_()
-    , target_()
-    , up_()
-    , right_()
-    , initialUp_()
-    , resetOrientation_(0)
+      ,
+      minY_(1),
+      orientation_(0),
+      position_(),
+      target_(),
+      up_(),
+      right_(),
+      initialUp_(),
+      resetOrientation_(0)
 {
     if (perspective == Default)
     {
@@ -35,26 +36,22 @@ Camera::Camera(CameraPerspective perspective)
     UpdateViewMatrix();
 }
 
-void
-Camera::Translate(float x, float y, float z)
+void Camera::Translate(float x, float y, float z)
 {
     Translate(QVector3D(x, y, z));
 }
 
-void
-Camera::Translate(QVector3D translation)
+void Camera::Translate(QVector3D translation)
 {
     SetPosition(position_ + translation);
 }
 
-void
-Camera::SetPosition(float x , float y, float z)
+void Camera::SetPosition(float x, float y, float z)
 {
     SetPosition(QVector3D(x, y, z));
 }
 
-void
-Camera::SetPosition(QVector3D position)
+void Camera::SetPosition(QVector3D position)
 {
     if (position.y() >= minY_)
     {
@@ -63,36 +60,29 @@ Camera::SetPosition(QVector3D position)
     }
 }
 
-void
-Camera::SetToObjectPosition(GLObject* object)
+void Camera::SetToObjectPosition(GLObject* object)
 {
     SetPosition(object->GetPosition());
 }
 
-void
-Camera::UpdateRight()
+void Camera::UpdateRight()
 {
     right_ = -QVector3D::crossProduct(up_, target_).normalized();
 }
 
-void
-Camera::UpdateUp()
+void Camera::UpdateUp()
 {
     double cosp = cos(orientation_);
     double sinp = sin(orientation_);
     // TODO: Find init ctor for QMatrix3x3 (maybe use << ?)
-    QMatrix4x4 rotY(cosp, 0, sinp, 0,
-                    0, 1, 0, 0,
-                    -sinp, 0, cosp, 0,
-                    0, 0, 0, 1);
+    QMatrix4x4 rotY(cosp, 0, sinp, 0, 0, 1, 0, 0, -sinp, 0, cosp, 0, 0, 0, 0, 1);
 
     // Don't accumulate the rotations on "up_", small errors will increase over time
     // Always use the initial up_ vector and rotate it to the current absolute orientation
     up_ = (rotY * initialUp_).toVector3D();
 }
 
-void
-Camera::SetOrientation(float orientation)
+void Camera::SetOrientation(float orientation)
 {
     orientation = fmod(orientation, 2 * M_PI);
     orientation_ = orientation;
@@ -102,41 +92,35 @@ Camera::SetOrientation(float orientation)
     UpdateViewMatrix();
 }
 
-void
-Camera::RotateAroundYAxis(float rotationRad)
+void Camera::RotateAroundYAxis(float rotationRad)
 {
     SetOrientation(orientation_ + rotationRad);
 }
 
-void
-Camera::ResetPosition()
+void Camera::ResetPosition()
 {
     SetPosition(resetPosition_);
 }
 
-void
-Camera::ResetOrientation()
+void Camera::ResetOrientation()
 {
     SetOrientation(resetOrientation_);
 }
 
-void
-Camera::ResetAll()
+void Camera::ResetAll()
 {
     trackedObject_ = nullptr;
     ResetPosition();
     ResetOrientation();
 }
 
-void
-Camera::SetUp(QVector3D up)
+void Camera::SetUp(QVector3D up)
 {
     up_ = up;
     UpdateViewMatrix();
 }
 
-void
-Camera::UpdateViewMatrix()
+void Camera::UpdateViewMatrix()
 {
     viewMatrix_.setToIdentity();
     viewMatrix_.lookAt(position_, position_ + target_, up_);

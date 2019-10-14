@@ -1,71 +1,79 @@
 #include "appconfig.h"
 #include "global.h"
-#include <QFile>
-#include <QDebug>
 #include <QColor>
+#include <QDebug>
+#include <QDir>
 #include <QDomDocument>
+#include <QFile>
 #include <QXmlStreamWriter>
 
 AppConfig::AppConfig(QString fileName)
-    : ch1IPAddress_("")
-    , ch1PortNum_("")
-    , ch1DataType_(DataType::SensorView)
-    , ch1FMURxCheck_(false)
-    , ch1LoadFMURx_("")
-    , ch1LoadFile_("")
-    , ch1PlaybackDataType_(DataType::SensorView)
-    , ch1DeltaDelay_(0)
-    , ch1EnableSendOut_(false)
-    , ch1SendOutPortNum_("5564")
-    , ch1FMUTxCheck_(false)
-    , ch1LoadFMUTx_("")
-    , ch1ShowFOV_(false)
-    , ch1MinRadius_(0.1f)
-    , ch1MaxRadius_(100)
-    , ch1AzimuthPos_(180)
-    , ch1AzimuthNeg_(-180)
+    : ch1IPAddress_(""),
+      ch1PortNum_(""),
+      ch1DataType_(DataType::SensorView),
+      ch1FMURxCheck_(false),
+      ch1LoadFMURx_(""),
+      ch1LoadFile_(""),
+      ch1PlaybackDataType_(DataType::SensorView),
+      ch1DeltaDelay_(0),
+      ch1EnableSendOut_(false),
+      ch1SendOutPortNum_("5564"),
+      ch1FMUTxCheck_(false),
+      ch1LoadFMUTx_(""),
+      ch1ShowFOV_(false),
+      ch1MinRadius_(0.1f),
+      ch1MaxRadius_(100),
+      ch1AzimuthPos_(180),
+      ch1AzimuthNeg_(-180)
 
-    , ch2IPAddress_("")
-    , ch2PortNum_("")
-    , ch2DataType_(DataType::SensorView)
-    , ch2FMURxCheck_(false)
-    , ch2LoadFMURx_("")
-    , ch2LoadFile_("")
-    , ch2PlaybackDataType_(DataType::SensorView)
-    , ch2DeltaDelay_(0)
-    , ch2EnableSendOut_(false)
-    , ch2SendOutPortNum_("5564")
-    , ch2FMUTxCheck_(false)
-    , ch2LoadFMUTx_("")
-    , ch2ShowFOV_(false)
-    , ch2MinRadius_(0.1f)
-    , ch2MaxRadius_(100)
-    , ch2AzimuthPos_(180)
-    , ch2AzimuthNeg_(-180)
+      ,
+      ch2IPAddress_(""),
+      ch2PortNum_(""),
+      ch2DataType_(DataType::SensorView),
+      ch2FMURxCheck_(false),
+      ch2LoadFMURx_(""),
+      ch2LoadFile_(""),
+      ch2PlaybackDataType_(DataType::SensorView),
+      ch2DeltaDelay_(0),
+      ch2EnableSendOut_(false),
+      ch2SendOutPortNum_("5564"),
+      ch2FMUTxCheck_(false),
+      ch2LoadFMUTx_(""),
+      ch2ShowFOV_(false),
+      ch2MinRadius_(0.1f),
+      ch2MaxRadius_(100),
+      ch2AzimuthPos_(180),
+      ch2AzimuthNeg_(-180)
 
-    , combineChannel_(false)
-    , showGrid_(true)
-    , showObjectDetails_(false)
-    , lockCamera_(false)
-    , laneType_(LaneType::BoundaryLanes)
-    , typeColors_()
+      ,
+      combineChannel_(false),
+      showGrid_(true),
+      showObjectDetails_(false),
+      lockCamera_(false),
+      laneType_(LaneType::BoundaryLanes),
+      typeColors_()
 
-    , osiMsgSaveThreshold_(1000000)
-    , srcPath_("./")
+      ,
+      osiMsgSaveThreshold_(1000000),
+      srcPath_("./")
 
-    , configFileName_(fileName)
+      ,
+      configFileName_(fileName)
 {
-
+    QDir config_file_directory{config_file_path_};
+    if (!config_file_directory.exists())
+    {
+        config_file_directory.mkpath(".");
+    }
 }
 
-bool
-AppConfig::Load()
+bool AppConfig::Load()
 {
-    QFile file(configFileName_);
+    QFile file(config_file_path_ + "/" + configFileName_);
     if (!file.open(QIODevice::ReadOnly))
     {
         // TODO: Don't use qDebug for printing
-        qDebug() << "Error while loading config file: '" << configFileName_ << "'";
+        qDebug() << "Error while loading config file: '" << config_file_path_ + "/" + configFileName_ << "'";
         return false;
     }
 
@@ -75,47 +83,48 @@ AppConfig::Load()
 
     QDomElement root = dom.documentElement().toElement();
 
-    ch1IPAddress_  = root.elementsByTagName("CH1IpAddress").at(0).toElement().text();
-    ch1PortNum_    = root.elementsByTagName("CH1PortNumber").at(0).toElement().text();
-    ch1DataType_   = (DataType)root.elementsByTagName("CH1DataType").at(0).toElement().text().toInt();
+    ch1IPAddress_ = root.elementsByTagName("CH1IpAddress").at(0).toElement().text();
+    ch1PortNum_ = root.elementsByTagName("CH1PortNumber").at(0).toElement().text();
+    ch1DataType_ = (DataType)root.elementsByTagName("CH1DataType").at(0).toElement().text().toInt();
     ch1FMURxCheck_ = root.elementsByTagName("CH1FMURxCheck").at(0).toElement().text() == "1" ? true : false;
-    ch1LoadFMURx_  = root.elementsByTagName("CH1LoadFMURx").at(0).toElement().text();
-    ch1LoadFile_   = root.elementsByTagName("CH1LoadFile").at(0).toElement().text();
+    ch1LoadFMURx_ = root.elementsByTagName("CH1LoadFMURx").at(0).toElement().text();
+    ch1LoadFile_ = root.elementsByTagName("CH1LoadFile").at(0).toElement().text();
     ch1PlaybackDataType_ = (DataType)root.elementsByTagName("CH1PlaybackDataType").at(0).toElement().text().toInt();
-    ch1DeltaDelay_       = root.elementsByTagName("CH1DeltaDelay").at(0).toElement().text().toInt();
-    ch1EnableSendOut_    = root.elementsByTagName("CH1EnableSendOut").at(0).toElement().text() == "1" ? true : false;
-    ch1SendOutPortNum_   = root.elementsByTagName("CH1SendOutPortNumber").at(0).toElement().text();
-    ch1FMUTxCheck_       = root.elementsByTagName("CH1FMUTxCheck").at(0).toElement().text() == "1" ? true : false;
-    ch1LoadFMUTx_        = root.elementsByTagName("CH1LoadFMUTx").at(0).toElement().text();
-    ch1ShowFOV_          = root.elementsByTagName("CH1ShowFOV").at(0).toElement().text() == "1" ? true : false;
-    ch1MinRadius_        = root.elementsByTagName("CH1MinRadius").at(0).toElement().text().toFloat();
-    ch1MaxRadius_        = root.elementsByTagName("CH1MaxRadius").at(0).toElement().text().toFloat();
-    ch1AzimuthPos_       = root.elementsByTagName("CH1AzimuthPos").at(0).toElement().text().toFloat();
-    ch1AzimuthNeg_       = root.elementsByTagName("CH1AzimuthNeg").at(0).toElement().text().toFloat();
+    ch1DeltaDelay_ = root.elementsByTagName("CH1DeltaDelay").at(0).toElement().text().toInt();
+    ch1EnableSendOut_ = root.elementsByTagName("CH1EnableSendOut").at(0).toElement().text() == "1" ? true : false;
+    ch1SendOutPortNum_ = root.elementsByTagName("CH1SendOutPortNumber").at(0).toElement().text();
+    ch1FMUTxCheck_ = root.elementsByTagName("CH1FMUTxCheck").at(0).toElement().text() == "1" ? true : false;
+    ch1LoadFMUTx_ = root.elementsByTagName("CH1LoadFMUTx").at(0).toElement().text();
+    ch1ShowFOV_ = root.elementsByTagName("CH1ShowFOV").at(0).toElement().text() == "1" ? true : false;
+    ch1MinRadius_ = root.elementsByTagName("CH1MinRadius").at(0).toElement().text().toFloat();
+    ch1MaxRadius_ = root.elementsByTagName("CH1MaxRadius").at(0).toElement().text().toFloat();
+    ch1AzimuthPos_ = root.elementsByTagName("CH1AzimuthPos").at(0).toElement().text().toFloat();
+    ch1AzimuthNeg_ = root.elementsByTagName("CH1AzimuthNeg").at(0).toElement().text().toFloat();
 
-    ch2IPAddress_  = root.elementsByTagName("CH2IpAddress").at(0).toElement().text();
-    ch2PortNum_    = root.elementsByTagName("CH2PortNumber").at(0).toElement().text();
-    ch2DataType_   = (DataType)root.elementsByTagName("CH2DataType").at(0).toElement().text().toInt();
+    ch2IPAddress_ = root.elementsByTagName("CH2IpAddress").at(0).toElement().text();
+    ch2PortNum_ = root.elementsByTagName("CH2PortNumber").at(0).toElement().text();
+    ch2DataType_ = (DataType)root.elementsByTagName("CH2DataType").at(0).toElement().text().toInt();
     ch2FMURxCheck_ = root.elementsByTagName("CH2FMUCheck").at(0).toElement().text() == "1" ? true : false;
-    ch2LoadFMURx_  = root.elementsByTagName("CH2LoadFMU").at(0).toElement().text();
-    ch2LoadFile_   = root.elementsByTagName("CH2LoadFile").at(0).toElement().text();
+    ch2LoadFMURx_ = root.elementsByTagName("CH2LoadFMU").at(0).toElement().text();
+    ch2LoadFile_ = root.elementsByTagName("CH2LoadFile").at(0).toElement().text();
     ch2PlaybackDataType_ = (DataType)root.elementsByTagName("CH2PlaybackDataType").at(0).toElement().text().toInt();
-    ch2DeltaDelay_       = root.elementsByTagName("CH2DeltaDelay").at(0).toElement().text().toInt();
-    ch2EnableSendOut_    = root.elementsByTagName("CH2EnableSendOut").at(0).toElement().text() == "1" ? true : false;
-    ch2SendOutPortNum_   = root.elementsByTagName("CH2SendOutPortNumber").at(0).toElement().text();
-    ch2FMUTxCheck_       = root.elementsByTagName("CH2FMUTxCheck").at(0).toElement().text() == "1" ? true : false;
-    ch2LoadFMUTx_        = root.elementsByTagName("CH2LoadFMUTx").at(0).toElement().text();
-    ch2ShowFOV_          = root.elementsByTagName("CH2ShowFOV").at(0).toElement().text() == "1" ? true : false;
-    ch2MinRadius_        = root.elementsByTagName("CH2MinRadius").at(0).toElement().text().toFloat();
-    ch2MaxRadius_        = root.elementsByTagName("CH2MaxRadius").at(0).toElement().text().toFloat();
-    ch2AzimuthPos_       = root.elementsByTagName("CH2AzimuthPos").at(0).toElement().text().toFloat();
-    ch2AzimuthNeg_       = root.elementsByTagName("CH2AzimuthNeg").at(0).toElement().text().toFloat();
+    ch2DeltaDelay_ = root.elementsByTagName("CH2DeltaDelay").at(0).toElement().text().toInt();
+    ch2EnableSendOut_ = root.elementsByTagName("CH2EnableSendOut").at(0).toElement().text() == "1" ? true : false;
+    ch2SendOutPortNum_ = root.elementsByTagName("CH2SendOutPortNumber").at(0).toElement().text();
+    ch2FMUTxCheck_ = root.elementsByTagName("CH2FMUTxCheck").at(0).toElement().text() == "1" ? true : false;
+    ch2LoadFMUTx_ = root.elementsByTagName("CH2LoadFMUTx").at(0).toElement().text();
+    ch2ShowFOV_ = root.elementsByTagName("CH2ShowFOV").at(0).toElement().text() == "1" ? true : false;
+    ch2MinRadius_ = root.elementsByTagName("CH2MinRadius").at(0).toElement().text().toFloat();
+    ch2MaxRadius_ = root.elementsByTagName("CH2MaxRadius").at(0).toElement().text().toFloat();
+    ch2AzimuthPos_ = root.elementsByTagName("CH2AzimuthPos").at(0).toElement().text().toFloat();
+    ch2AzimuthNeg_ = root.elementsByTagName("CH2AzimuthNeg").at(0).toElement().text().toFloat();
 
-    combineChannel_    = root.elementsByTagName("CombineChannel").at(0).toElement().text() == "1" ? true : false;
-    showGrid_          = root.elementsByTagName("ShowGrid").at(0).toElement().text() == "1" ? true : false;
+    combineChannel_ = root.elementsByTagName("CombineChannel").at(0).toElement().text() == "1" ? true : false;
+    showGrid_ = root.elementsByTagName("ShowGrid").at(0).toElement().text() == "1" ? true : false;
     showObjectDetails_ = root.elementsByTagName("ShowObjectDetails").at(0).toElement().text() == "1" ? true : false;
-    lockCamera_        = root.elementsByTagName("LockCamera").at(0).toElement().text() == "1" ? true : false;
-    laneType_          = root.elementsByTagName("LaneType").at(0).toElement().text() == "0" ? LaneType::BoundaryLanes : LaneType::CenterLanes;
+    lockCamera_ = root.elementsByTagName("LockCamera").at(0).toElement().text() == "1" ? true : false;
+    laneType_ = root.elementsByTagName("LaneType").at(0).toElement().text() == "0" ? LaneType::BoundaryLanes
+                                                                                   : LaneType::CenterLanes;
 
     osiMsgSaveThreshold_ = root.elementsByTagName("OSIMsgSaveThreshold").at(0).toElement().text().toInt();
 
@@ -130,14 +139,13 @@ AppConfig::Load()
     return true;
 }
 
-bool
-AppConfig::Save()
+bool AppConfig::Save()
 {
-    QFile file(configFileName_);
+    QFile file(config_file_path_ + "/" + configFileName_);
     if (!file.open(QIODevice::WriteOnly))
     {
         // TODO: Don't use qDebug for printing
-        qDebug() << "Error while saving config file: '" << configFileName_ << "'";
+        qDebug() << "Error while saving config file: '" << config_file_path_ + "/" + configFileName_ << "'";
         return false;
     }
 
@@ -207,4 +215,3 @@ AppConfig::Save()
 
     return true;
 }
-

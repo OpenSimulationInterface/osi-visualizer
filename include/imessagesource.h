@@ -4,17 +4,15 @@
 ///
 /// @brief
 ///
-
-
-#pragma once
-
+#ifndef OSI_VISUALIZER_IMESSAGE_SOURCE_H
+#define OSI_VISUALIZER_IMESSAGE_SOURCE_H
 
 class IMessageSource
 {
-    public:
-        IMessageSource(): isPaused_(false), isConnected_(false) {}
+  public:
+    IMessageSource() : isPaused_(false), isConnected_(false) {}
 
-        bool isPaused_;
-        bool isConnected_;
-
+    bool isPaused_;
+    bool isConnected_;
 };
+#endif  // OSI_VISUALIZER_IMESSAGE_SOURCE_H

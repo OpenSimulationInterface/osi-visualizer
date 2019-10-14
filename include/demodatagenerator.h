@@ -4,17 +4,18 @@
 ///
 /// @brief
 ///
-
-#pragma once
+#ifndef OSI_VISUALIZER_DEMO_DATA_GENERATOR_H
+#define OSI_VISUALIZER_DEMO_DATA_GENERATOR_H
 #include "osiobjectstub.h"
-#include<QList>
+#include <QList>
 
 class DemoDataGenerator
 {
-    public:
-        DemoDataGenerator(QList<OSIObjectStub*>* vehicles);
-        void Update();
+  public:
+    DemoDataGenerator(QList<OSIObjectStub*>* vehicles);
+    void Update();
 
-    private:
-        QList<OSIObjectStub*>* vehicles;
+  private:
+    QList<OSIObjectStub*>* vehicles;
 };
+#endif  // OSI_VISUALIZER_DEMO_DATA_GENERATOR_H

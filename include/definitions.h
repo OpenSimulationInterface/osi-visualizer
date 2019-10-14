@@ -5,8 +5,8 @@
 /// @brief
 ///
 
-#ifndef DEFINITIONS_H
-#define DEFINITIONS_H
+#ifndef OSI_VISUALIZER_DEFINITIONS_H
+#define OSI_VISUALIZER_DEFINITIONS_H
 
 #include <QString>
 
@@ -16,5 +16,4 @@ const QString srcPath = "./";
 #define DRAW_CENTER_LINES false
 #define DRAW_LANE_BOUNDARIES true
 
-#endif // DEFINITIONS_H
-
+#endif  // OSI_VISUALIZER_DEFINITIONS_H

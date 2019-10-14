@@ -4,8 +4,8 @@
 ///
 /// @brief
 ///
-
-#pragma once
+#ifndef OSI_VISUALIZER_OSI_OBJECT_STUB_H
+#define OSI_VISUALIZER_OSI_OBJECT_STUB_H
 #include <QVector3D>
 
 enum ObjectType
@@ -16,13 +16,13 @@ enum ObjectType
 
 class OSIObjectStub
 {
-    public:
-        OSIObjectStub();
-        OSIObjectStub(int id, ObjectType type, QVector3D position, float orientation);
+  public:
+    OSIObjectStub();
+    OSIObjectStub(int id, ObjectType type, QVector3D position, float orientation);
 
-        int id;
-        ObjectType type;
-        QVector3D position;
-        float orientation;
+    int id;
+    ObjectType type;
+    QVector3D position;
+    float orientation;
 };
-
+#endif  // OSI_VISUALIZER_OSI_OBJECT_STUB_H

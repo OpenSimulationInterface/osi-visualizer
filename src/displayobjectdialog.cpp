@@ -2,20 +2,19 @@
 #include "displayobjectdialog.h"
 #include "global.h"
 
-
 #include <QGridLayout>
 
 DisplayObjectDialog::DisplayObjectDialog(QWidget* parent)
-    : QDialog(parent)
-    , positionX_(new QLabel(tr("-"), this))
-    , positionY_(new QLabel(tr("-"), this))
-    , positionZ_(new QLabel(tr("-"), this))
-    , velocityX_(new QLabel(tr("-"), this))
-    , velocityY_(new QLabel(tr("-"), this))
-    , velocityZ_(new QLabel(tr("-"), this))
-    , accelerationX_(new QLabel(tr("-"), this))
-    , accelerationY_(new QLabel(tr("-"), this))
-    , accelerationZ_(new QLabel(tr("-"), this))
+    : QDialog(parent),
+      positionX_(new QLabel(tr("-"), this)),
+      positionY_(new QLabel(tr("-"), this)),
+      positionZ_(new QLabel(tr("-"), this)),
+      velocityX_(new QLabel(tr("-"), this)),
+      velocityY_(new QLabel(tr("-"), this)),
+      velocityZ_(new QLabel(tr("-"), this)),
+      accelerationX_(new QLabel(tr("-"), this)),
+      accelerationY_(new QLabel(tr("-"), this)),
+      accelerationZ_(new QLabel(tr("-"), this))
 {
     setWindowTitle(tr("Object Information"));
 
@@ -80,8 +79,7 @@ DisplayObjectDialog::DisplayObjectDialog(QWidget* parent)
     setMaximumSize(200, 600);
 }
 
-void
-DisplayObjectDialog::UpdateObjectInformation(const GLObject& object)
+void DisplayObjectDialog::UpdateObjectInformation(const GLObject& object)
 {
     QString type = Global::GetObjectTypeName(object.GetObjectType());
     setWindowTitle(type + " - " + object.text_);
@@ -98,5 +96,3 @@ DisplayObjectDialog::UpdateObjectInformation(const GLObject& object)
     accelerationY_->setText(QString::number(object.acceleration_.y()));
     accelerationZ_->setText(QString::number(object.acceleration_.z()));
 }
-
-

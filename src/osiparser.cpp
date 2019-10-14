@@ -3,7 +3,6 @@
 #endif
 #include "osiparser.h"
 
-
 #include <QFileDialog>
 #include <QMessageBox>
 
@@ -19,17 +18,11 @@
  */
 
 OsiParser::OsiParser(const AppConfig& config)
-    : isFirstMessage_(true)
-    , startSaveOSIMsg_(false)
-    , osiMsgString_("")
-    , osiMsgNumber_(0)
-    , config_(config)
+    : isFirstMessage_(true), startSaveOSIMsg_(false), osiMsgString_(""), osiMsgNumber_(0), config_(config)
 {
-
 }
 
-void
-OsiParser::CancelSaveOSIMessage()
+void OsiParser::CancelSaveOSIMessage()
 {
     isFirstMessage_ = true;
     startSaveOSIMsg_ = false;
@@ -38,8 +31,7 @@ OsiParser::CancelSaveOSIMessage()
     emit EnableExport(false);
 }
 
-void
-OsiParser::ParseReceivedSDMessage(const osi3::SensorData& sd)
+void OsiParser::ParseReceivedSDMessage(const osi3::SensorData& sd)
 {
     LocalMonitor<osi3::SensorData>(sd);
 
@@ -51,8 +43,7 @@ OsiParser::ParseReceivedSDMessage(const osi3::SensorData& sd)
     emit MessageParsed(objectMessage, laneMessage);
 }
 
-void
-OsiParser::ParseReceivedSVMessage(const osi3::SensorView& sv)
+void OsiParser::ParseReceivedSVMessage(const osi3::SensorView& sv)
 {
     LocalMonitor<osi3::SensorView>(sv);
 
@@ -66,32 +57,28 @@ OsiParser::ParseReceivedSVMessage(const osi3::SensorView& sv)
 }
 
 template <typename T>
-void
-OsiParser::LocalMonitor(const T& data)
+void OsiParser::LocalMonitor(const T& data)
 {
     if (isFirstMessage_)
     {
         isFirstMessage_ = false;
         emit EnableExport(true);
     }
-    else if(startSaveOSIMsg_ && osiMsgNumber_ < config_.osiMsgSaveThreshold_)
+    else if (startSaveOSIMsg_ && osiMsgNumber_ < config_.osiMsgSaveThreshold_)
     {
         ++osiMsgNumber_;
 
         osiMsgString_ += data.SerializeAsString();
         osiMsgString_ += "$$__$$";
     }
-    else if(osiMsgNumber_ >= config_.osiMsgSaveThreshold_)
+    else if (osiMsgNumber_ >= config_.osiMsgSaveThreshold_)
     {
         emit SaveOSIMsgOverflow(config_.osiMsgSaveThreshold_);
     }
 }
 
-//Parse Ground Truth Data
-void
-OsiParser::ParseGroundtruth(const osi3::GroundTruth& groundTruth,
-                            Message& objectMessage,
-                            LaneMessage& laneMessage)
+// Parse Ground Truth Data
+void OsiParser::ParseGroundtruth(const osi3::GroundTruth& groundTruth, Message& objectMessage, LaneMessage& laneMessage)
 {
     for (int i = 0; i < groundTruth.stationary_object_size(); ++i)
     {
@@ -130,7 +117,7 @@ OsiParser::ParseGroundtruth(const osi3::GroundTruth& groundTruth,
         ParseGroundtruthStationaryObject(objectMessage, roadM.base(), ObjectType::OtherObject, idStr);
     }
 
-    if(config_.laneType_ == LaneType::CenterLanes)
+    if (config_.laneType_ == LaneType::CenterLanes)
     {
         // DRAW_CENTER_LINES
         for (int i = 0; i < groundTruth.lane_size(); ++i)
@@ -176,11 +163,10 @@ OsiParser::ParseGroundtruth(const osi3::GroundTruth& groundTruth,
 }
 
 // Parse a moving ground truth object
-void
-OsiParser::ParseGroundtruthMovingObject(Message& objectMessage,
-                                        const osi3::BaseMoving& baseObject,
-                                        const ObjectType objectType,
-                                        const QString& idStr)
+void OsiParser::ParseGroundtruthMovingObject(Message& objectMessage,
+                                             const osi3::BaseMoving& baseObject,
+                                             const ObjectType objectType,
+                                             const QString& idStr)
 {
     if (objectType == ObjectType::None)
     {
@@ -203,7 +189,7 @@ OsiParser::ParseGroundtruthMovingObject(Message& objectMessage,
     tmpMsg.id = Global::GetObjectTypeName(objectType) + idStr;
     tmpMsg.name = "ID: " + idStr;
     tmpMsg.type = objectType;
-    tmpMsg.orientation = orientation+M_PI_2;
+    tmpMsg.orientation = orientation + M_PI_2;
     tmpMsg.position = QVector3D(position.y(), 0, position.x());
     tmpMsg.realPosition = QVector3D(position.x(), position.y(), position.z());
     tmpMsg.velocitie = QVector3D(velocity.x(), velocity.y(), velocity.z());
@@ -213,13 +199,11 @@ OsiParser::ParseGroundtruthMovingObject(Message& objectMessage,
     objectMessage.append(tmpMsg);
 }
 
-
 // Parse a stationary ground truth object
-void
-OsiParser::ParseGroundtruthStationaryObject(Message& objectMessage,
-                                            const osi3::BaseStationary& baseObject,
-                                            const ObjectType objectType,
-                                            const QString& idStr)
+void OsiParser::ParseGroundtruthStationaryObject(Message& objectMessage,
+                                                 const osi3::BaseStationary& baseObject,
+                                                 const ObjectType objectType,
+                                                 const QString& idStr)
 {
     if (objectType == ObjectType::None)
     {
@@ -247,7 +231,7 @@ OsiParser::ParseGroundtruthStationaryObject(Message& objectMessage,
     tmpMsg.id = Global::GetObjectTypeName(objectType) + idStr;
     tmpMsg.name = "ID: " + idStr;
     tmpMsg.type = objectType;
-    tmpMsg.orientation = orientation+M_PI_2;
+    tmpMsg.orientation = orientation + M_PI_2;
     tmpMsg.position = QVector3D(position.y(), 0, position.x());
     tmpMsg.realPosition = QVector3D(position.x(), position.y(), position.z());
     tmpMsg.velocitie = QVector3D(velocity.x(), velocity.y(), velocity.z());
@@ -257,31 +241,28 @@ OsiParser::ParseGroundtruthStationaryObject(Message& objectMessage,
     objectMessage.append(tmpMsg);
 }
 
-
 // Parse SensorData
-void
-OsiParser::ParseSensorData(const osi3::SensorData &sensorData,
-                           Message& objectMessage,
-                           LaneMessage& laneMessage)
+void OsiParser::ParseSensorData(const osi3::SensorData& sensorData, Message& objectMessage, LaneMessage& laneMessage)
 {
     for (int i = 0; i < sensorData.stationary_object_size(); ++i)
     {
         const osi3::DetectedStationaryObject& dectObj = sensorData.stationary_object(i);
         double highestProbability = 0;
         int highestIndex = -1;
-        for(int j = 0; j < dectObj.candidate().size(); ++j)
+        for (int j = 0; j < dectObj.candidate().size(); ++j)
         {
             const osi3::DetectedStationaryObject_CandidateStationaryObject candi = dectObj.candidate(j);
-            if(candi.probability() > highestProbability)
+            if (candi.probability() > highestProbability)
             {
                 highestProbability = candi.probability();
                 highestIndex = j;
             }
         }
 
-        if(highestIndex > -1)
+        if (highestIndex > -1)
         {
-            ObjectType objectType = GetObjectTypeFromOsiObjectType(dectObj.candidate(highestIndex).classification().type());
+            ObjectType objectType =
+                GetObjectTypeFromOsiObjectType(dectObj.candidate(highestIndex).classification().type());
             QString idStr = QString::number(dectObj.header().ground_truth_id(highestIndex).value());
             ParseSensorDataStationaryObject(objectMessage, dectObj.base(), objectType, idStr);
         }
@@ -292,19 +273,20 @@ OsiParser::ParseSensorData(const osi3::SensorData &sensorData,
         const osi3::DetectedMovingObject& dectObj = sensorData.moving_object(i);
         double highestProbability = 0;
         int highestIndex = -1;
-        for(int j = 0; j < dectObj.candidate().size(); ++j)
+        for (int j = 0; j < dectObj.candidate().size(); ++j)
         {
             const osi3::DetectedMovingObject_CandidateMovingObject candi = dectObj.candidate(j);
-            if(candi.probability() > highestProbability)
+            if (candi.probability() > highestProbability)
             {
                 highestProbability = candi.probability();
                 highestIndex = j;
             }
         }
 
-        if(highestIndex > -1)
+        if (highestIndex > -1)
         {
-            ObjectType objectType = GetObjectTypeFromOsiObjectType(dectObj.candidate(highestIndex).vehicle_classification().type());
+            ObjectType objectType =
+                GetObjectTypeFromOsiObjectType(dectObj.candidate(highestIndex).vehicle_classification().type());
             QString idStr = QString::number(dectObj.header().ground_truth_id(highestIndex).value());
             ParseSensorDataMovingObject(objectMessage, dectObj.base(), objectType, idStr);
         }
@@ -315,22 +297,25 @@ OsiParser::ParseSensorData(const osi3::SensorData &sensorData,
         const osi3::DetectedTrafficSign_DetectedMainSign& dectMS = sensorData.traffic_sign(i).main_sign();
         double highestProbability = 0;
         int highestIndex = -1;
-        for(int j = 0; j < dectMS.candidate().size(); ++j)
+        for (int j = 0; j < dectMS.candidate().size(); ++j)
         {
             const osi3::DetectedTrafficSign_DetectedMainSign_CandidateMainSign candi = dectMS.candidate(j);
-            if(candi.probability() > highestProbability)
+            if (candi.probability() > highestProbability)
             {
                 highestProbability = candi.probability();
                 highestIndex = j;
             }
         }
 
-        if(highestIndex > -1)
+        if (highestIndex > -1)
         {
-            QString idStr = QString::number(sensorData.traffic_sign(i).header().ground_truth_id(highestIndex).value());
-            ParseSensorDataStationaryObject(objectMessage, dectMS.base(), ObjectType::TrafficSign, idStr);
+            if (sensorData.traffic_sign(i).header().ground_truth_id_size() > 0)
+            {
+                QString idStr =
+                    QString::number(sensorData.traffic_sign(i).header().ground_truth_id(highestIndex).value());
+                ParseSensorDataStationaryObject(objectMessage, dectMS.base(), ObjectType::TrafficSign, idStr);
+            }
         }
-
     }
 
     for (int i = 0; i < sensorData.traffic_light_size(); ++i)
@@ -338,17 +323,17 @@ OsiParser::ParseSensorData(const osi3::SensorData &sensorData,
         const osi3::DetectedTrafficLight& dectTL = sensorData.traffic_light(i);
         double highestProbability = 0;
         int highestIndex = -1;
-        for(int j = 0; j < dectTL.candidate().size(); ++j)
+        for (int j = 0; j < dectTL.candidate().size(); ++j)
         {
             const osi3::DetectedTrafficLight_CandidateTrafficLight candi = dectTL.candidate(j);
-            if(candi.probability() > highestProbability)
+            if (candi.probability() > highestProbability)
             {
                 highestProbability = candi.probability();
                 highestIndex = j;
             }
         }
 
-        if(highestIndex > -1)
+        if (highestIndex > -1)
         {
             QString idStr = QString::number(dectTL.header().ground_truth_id(highestIndex).value());
             ParseSensorDataStationaryObject(objectMessage, dectTL.base(), ObjectType::TrafficLight, idStr);
@@ -360,24 +345,24 @@ OsiParser::ParseSensorData(const osi3::SensorData &sensorData,
         const osi3::DetectedRoadMarking& dectRM = sensorData.road_marking(i);
         double highestProbability = 0;
         int highestIndex = -1;
-        for(int j = 0; j < dectRM.candidate().size(); ++j)
+        for (int j = 0; j < dectRM.candidate().size(); ++j)
         {
             const osi3::DetectedRoadMarking_CandidateRoadMarking candi = dectRM.candidate(j);
-            if(candi.probability() > highestProbability)
+            if (candi.probability() > highestProbability)
             {
                 highestProbability = candi.probability();
                 highestIndex = j;
             }
         }
 
-        if(highestIndex > -1)
+        if (highestIndex > -1)
         {
             QString idStr = QString::number(dectRM.header().ground_truth_id(highestIndex).value());
             ParseSensorDataStationaryObject(objectMessage, dectRM.base(), ObjectType::OtherObject, idStr);
         }
     }
 
-    if(config_.laneType_ == LaneType::CenterLanes)
+    if (config_.laneType_ == LaneType::CenterLanes)
     {
         // DRAW_CENTER_LINES
         for (int i = 0; i < sensorData.lane_size(); ++i)
@@ -386,16 +371,16 @@ OsiParser::ParseSensorData(const osi3::SensorData &sensorData,
 
             int highestProbability = 0;
             int highestIndex = -1;
-            for(int i = 0; i < detectL.candidate_size(); ++i)
+            for (int i = 0; i < detectL.candidate_size(); ++i)
             {
-                if(highestProbability < detectL.candidate(i).probability())
+                if (highestProbability < detectL.candidate(i).probability())
                 {
                     highestProbability = detectL.candidate(i).probability();
                     highestIndex = i;
                 }
             }
 
-            if(highestIndex > -1)
+            if (highestIndex > -1)
             {
                 LaneStruct tmpLane;
                 tmpLane.id = detectL.header().ground_truth_id(highestIndex).value();
@@ -403,23 +388,23 @@ OsiParser::ParseSensorData(const osi3::SensorData &sensorData,
                 QVector<QVector3D> centerLines;
                 const osi3::Lane_Classification& laneC = detectL.candidate(highestIndex).classification();
 
-                for(int c = 0; c < laneC.centerline_size(); ++c)
+                for (int c = 0; c < laneC.centerline_size(); ++c)
                 {
                     const osi3::Vector3d& centerLine = laneC.centerline(c);
-                    if(centerLine.x() != 0 || centerLine.y() != 0 || centerLine.z() != 0)
+                    if (centerLine.x() != 0 || centerLine.y() != 0 || centerLine.z() != 0)
                     {
                         centerLines.append(QVector3D(centerLine.x(), 0, -centerLine.y()));
                     }
-                    else if(!centerLines.empty())
+                    else if (!centerLines.empty())
                     {
                         tmpLane.centerLanes.append(centerLines);
                         centerLines.clear();
                     }
                 }
-                if(!centerLines.empty())
+                if (!centerLines.empty())
                     tmpLane.centerLanes.append(centerLines);
 
-                if(!tmpLane.centerLanes.empty())
+                if (!tmpLane.centerLanes.empty())
                     laneMessage.append(tmpLane);
             }
         }
@@ -433,41 +418,41 @@ OsiParser::ParseSensorData(const osi3::SensorData &sensorData,
 
             int highestProbability = 0;
             int highestIndex = -1;
-            for(int i = 0; i < dLaneB.candidate_size(); ++i)
+            for (int i = 0; i < dLaneB.candidate_size(); ++i)
             {
-                if(highestProbability < dLaneB.candidate(i).probability())
+                if (highestProbability < dLaneB.candidate(i).probability())
                 {
                     highestProbability = dLaneB.candidate(i).probability();
                     highestIndex = i;
                 }
             }
 
-            if(highestIndex > -1)
+            if (highestIndex > -1)
             {
                 LaneStruct tmpLane;
                 tmpLane.id = dLaneB.header().ground_truth_id(highestIndex).value();
 
                 QVector<QVector3D> boundaryLines;
 
-                for(int b = 0; b < dLaneB.boundary_line_size(); ++b)
+                for (int b = 0; b < dLaneB.boundary_line_size(); ++b)
                 {
                     const osi3::Vector3d& position = dLaneB.boundary_line(b).position();
 
-                    if(position.x() != 0 || position.y() != 0 || position.z() != 0)
+                    if (position.x() != 0 || position.y() != 0 || position.z() != 0)
                     {
                         boundaryLines.append(QVector3D(position.x(), 0, -position.y()));
                     }
-                    else if(!boundaryLines.empty())
+                    else if (!boundaryLines.empty())
                     {
                         tmpLane.boundaryLanes.append(boundaryLines);
                         boundaryLines.clear();
                     }
                 }
 
-                if(!boundaryLines.empty())
+                if (!boundaryLines.empty())
                     tmpLane.boundaryLanes.append(boundaryLines);
 
-                if(!tmpLane.boundaryLanes.empty())
+                if (!tmpLane.boundaryLanes.empty())
                     laneMessage.append(tmpLane);
             }
         }
@@ -479,11 +464,10 @@ OsiParser::ParseSensorData(const osi3::SensorData &sensorData,
  * Parse a moving SensorData Object
  *
  */
-void
-OsiParser::ParseSensorDataMovingObject(Message& objectMessage,
-                                       const osi3::BaseMoving& baseObject,
-                                       const ObjectType objectType,
-                                       const QString& idStr)
+void OsiParser::ParseSensorDataMovingObject(Message& objectMessage,
+                                            const osi3::BaseMoving& baseObject,
+                                            const ObjectType objectType,
+                                            const QString& idStr)
 {
     if (objectType == ObjectType::None)
     {
@@ -505,12 +489,12 @@ OsiParser::ParseSensorDataMovingObject(Message& objectMessage,
     tmpMsg.velocitie = QVector3D(velocity.x(), velocity.y(), velocity.z());
     tmpMsg.acceleration = QVector3D(acceleration.x(), acceleration.y(), acceleration.z());
 
-    if(baseObject.base_polygon_size() == 4)
+    if (baseObject.base_polygon_size() == 4)
     {
-        for(int i = 0; i < 4; ++i)
+        for (int i = 0; i < 4; ++i)
         {
             const osi3::Vector2d& vertice = baseObject.base_polygon(i);
-            tmpMsg.basePoly.push_back(QVector3D(vertice.x() - position.x(), 0, -vertice.y()+position.y()));
+            tmpMsg.basePoly.push_back(QVector3D(vertice.x() - position.x(), 0, -vertice.y() + position.y()));
         }
     }
     else
@@ -527,11 +511,10 @@ OsiParser::ParseSensorDataMovingObject(Message& objectMessage,
     objectMessage.append(tmpMsg);
 }
 
-void
-OsiParser::ParseSensorDataStationaryObject(Message& objectMessage,
-                                           const osi3::BaseStationary& baseObject,
-                                           const ObjectType objectType,
-                                           const QString& idStr)
+void OsiParser::ParseSensorDataStationaryObject(Message& objectMessage,
+                                                const osi3::BaseStationary& baseObject,
+                                                const ObjectType objectType,
+                                                const QString& idStr)
 {
     if (objectType == ObjectType::None)
     {
@@ -558,9 +541,9 @@ OsiParser::ParseSensorDataStationaryObject(Message& objectMessage,
     tmpMsg.velocitie = QVector3D(velocity.x(), velocity.y(), velocity.z());
     tmpMsg.acceleration = QVector3D(acceleration.x(), acceleration.y(), acceleration.z());
 
-    if(baseObject.base_polygon_size() == 4)
+    if (baseObject.base_polygon_size() == 4)
     {
-        for(int i = 0; i < 4; ++i)
+        for (int i = 0; i < 4; ++i)
         {
             const osi3::Vector2d& vertice = baseObject.base_polygon(i);
             tmpMsg.basePoly.push_back(QVector3D(vertice.x(), 0, -vertice.y()));
@@ -580,15 +563,14 @@ OsiParser::ParseSensorDataStationaryObject(Message& objectMessage,
     objectMessage.append(tmpMsg);
 }
 
-//Export Osi message
-void
-OsiParser::ExportOsiMessage()
+// Export Osi message
+void OsiParser::ExportOsiMessage()
 {
-    if(startSaveOSIMsg_ == false && osiMsgString_.empty() == true)
+    if (startSaveOSIMsg_ == false && osiMsgString_.empty() == true)
     {
         startSaveOSIMsg_ = true;
     }
-    else if(startSaveOSIMsg_ == true && osiMsgString_.empty() == false)
+    else if (startSaveOSIMsg_ == true && osiMsgString_.empty() == false)
     {
         startSaveOSIMsg_ = false;
 
@@ -617,11 +599,11 @@ OsiParser::ExportOsiMessage()
 }
 
 // Convert object types
-ObjectType
-OsiParser::GetObjectTypeFromOsiObjectType(const osi3::MovingObject_VehicleClassification_Type& vehicleType)
+ObjectType OsiParser::GetObjectTypeFromOsiObjectType(const osi3::MovingObject_VehicleClassification_Type& vehicleType)
 {
     ObjectType objType = ObjectType::None;
-    switch (vehicleType) {
+    switch (vehicleType)
+    {
         case osi3::MovingObject_VehicleClassification_Type_TYPE_UNKNOWN:
             objType = ObjectType::UnknownObject;
             break;
@@ -655,11 +637,11 @@ OsiParser::GetObjectTypeFromOsiObjectType(const osi3::MovingObject_VehicleClassi
     return objType;
 }
 
-ObjectType
-OsiParser::GetObjectTypeFromOsiObjectType(const osi3::MovingObject_Type& objectType)
+ObjectType OsiParser::GetObjectTypeFromOsiObjectType(const osi3::MovingObject_Type& objectType)
 {
     ObjectType objType = ObjectType::None;
-    switch (objectType) {
+    switch (objectType)
+    {
         case osi3::MovingObject_Type_TYPE_UNKNOWN:
             objType = ObjectType::UnknownObject;
             break;
@@ -682,11 +664,11 @@ OsiParser::GetObjectTypeFromOsiObjectType(const osi3::MovingObject_Type& objectT
     return objType;
 }
 
-ObjectType
-OsiParser::GetObjectTypeFromOsiObjectType(const osi3::StationaryObject_Classification_Type& objectType)
+ObjectType OsiParser::GetObjectTypeFromOsiObjectType(const osi3::StationaryObject_Classification_Type& objectType)
 {
     ObjectType objType = ObjectType::None;
-    switch (objectType) {
+    switch (objectType)
+    {
         case osi3::StationaryObject_Classification_Type_TYPE_UNKNOWN:
             objType = ObjectType::UnknownObject;
             break;
@@ -715,18 +697,12 @@ OsiParser::GetObjectTypeFromOsiObjectType(const osi3::StationaryObject_Classific
     return objType;
 }
 
-ObjectType
-OsiParser::GetObjectTypeFromOsiObjectType(const osi3::TrafficSign_MainSign_Classification_Type& objectType)
+ObjectType OsiParser::GetObjectTypeFromOsiObjectType(const osi3::TrafficSign_MainSign_Classification_Type& objectType)
 {
     return ObjectType::TrafficSign;
 }
 
-
-ObjectType
-OsiParser::GetObjectTypeFromOsiObjectType(const osi3::TrafficLight_Classification_Mode& objectType)
+ObjectType OsiParser::GetObjectTypeFromOsiObjectType(const osi3::TrafficLight_Classification_Mode& objectType)
 {
     return ObjectType::TrafficLight;
 }
-
-
-

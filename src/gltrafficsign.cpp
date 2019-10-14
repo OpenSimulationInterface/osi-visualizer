@@ -1,8 +1,7 @@
 #include "gltrafficsign.h"
 #include <QtMath>
 
-GLTrafficSign::GLTrafficSign(QOpenGLFunctions_4_3_Core* functions,
-                             QString id)
+GLTrafficSign::GLTrafficSign(QOpenGLFunctions_4_3_Core* functions, QString id)
     : GLObject(GL_TRIANGLE_FAN, functions, id)
 {
     int slices = 30;

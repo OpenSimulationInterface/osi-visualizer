@@ -23,6 +23,3 @@ uint64_t GetTimeStampInNanoSecond<osi3::SensorView>(const osi3::SensorView& sv)
 
     return timeStamp;
 }
-
-
-

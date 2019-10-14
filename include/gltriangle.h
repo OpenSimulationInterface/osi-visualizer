@@ -4,12 +4,13 @@
 ///
 /// @brief
 ///
-
-#pragma once
+#ifndef OSI_VISUALIZER_GL_TRIANGLE_H
+#define OSI_VISUALIZER_GL_TRIANGLE_H
 #include "globject.h"
 
 class GLTriangle : public GLObject
 {
-    public:
-        GLTriangle(QOpenGLFunctions_4_3_Core* functions);
+  public:
+    GLTriangle(QOpenGLFunctions_4_3_Core* functions);
 };
+#endif  // OSI_VISUALIZER_GL_TRIANGLE_H

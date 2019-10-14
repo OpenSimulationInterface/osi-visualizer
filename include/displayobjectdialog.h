@@ -4,8 +4,8 @@
 ///
 /// @brief
 ///
-
-#pragma once
+#ifndef OSI_VISUALIZER_DISPLAY_OBJECT_DIALOG_H
+#define OSI_VISUALIZER_DISPLAY_OBJECT_DIALOG_H
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #endif
@@ -14,17 +14,16 @@
 #include <QDialog>
 #include <QLabel>
 
-
-class DisplayObjectDialog: public QDialog
+class DisplayObjectDialog : public QDialog
 {
     Q_OBJECT
 
-public:
+  public:
     explicit DisplayObjectDialog(QWidget* parent);
 
     void UpdateObjectInformation(const GLObject& object);
 
-private:
+  private:
     QLabel* positionX_;
     QLabel* positionY_;
     QLabel* positionZ_;
@@ -35,4 +34,4 @@ private:
     QLabel* accelerationY_;
     QLabel* accelerationZ_;
 };
-
+#endif  // OSI_VISUALIZER_DISPLAY_OBJECT_DIALOG_H

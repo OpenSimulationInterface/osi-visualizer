@@ -5,34 +5,31 @@
  *      Author:
  */
 
-
-
 #include "pythoncomparedialog.h"
 
 #include <fstream>
 
+#include <QDirIterator>
+#include <QFileDialog>
 #include <QGridLayout>
 #include <QLabel>
-#include <QPushButton>
-#include <QFileDialog>
-#include <QDirIterator>
 #include <QMessageBox>
+#include <QPushButton>
 
-
-PythonCompareDialog::PythonCompareDialog(QWidget *parent,
+PythonCompareDialog::PythonCompareDialog(QWidget* parent,
                                          const QString& scriptPath,
                                          const QString& osiFile1,
                                          const QString& osiFile2)
-    : QDialog(parent)
-    , osiFile1_(new QLineEdit(osiFile1, this))
-    , osiFile2_(new QLineEdit(osiFile2, this))
-    , scripts_(new QComboBox(this))
-    , logWin_(new QTextEdit(this))
-    , scriptPath_(scriptPath)
+    : QDialog(parent),
+      osiFile1_(new QLineEdit(osiFile1, this)),
+      osiFile2_(new QLineEdit(osiFile2, this)),
+      scripts_(new QComboBox(this)),
+      logWin_(new QTextEdit(this)),
+      scriptPath_(scriptPath)
 {
     setWindowTitle(tr("Python Compare"));
     setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
-    QGridLayout *mainGridLayout = new QGridLayout(this);
+    QGridLayout* mainGridLayout = new QGridLayout(this);
     // File 1
     mainGridLayout->addWidget(new QLabel(tr("OSI File 1:"), this), 0, 0);
     mainGridLayout->addWidget(osiFile1_, 0, 1);
@@ -72,51 +69,42 @@ PythonCompareDialog::PythonCompareDialog(QWidget *parent,
     mainGridLayout->addWidget(logWin_, 3, 0, 1, 2);
 }
 
-void
-PythonCompareDialog::OnBrowseFile1()
+void PythonCompareDialog::OnBrowseFile1()
 {
     QString fileName = osiFile1_->text();
 
-    fileName = QFileDialog::getOpenFileName(this,
-        tr("Load file"), fileName, tr("Text Files (*.txt)"));
+    fileName = QFileDialog::getOpenFileName(this, tr("Load file"), fileName, tr("Text Files (*.txt)"));
 
-    if(!fileName.isEmpty())
+    if (!fileName.isEmpty())
     {
         osiFile1_->setText(fileName);
         osiFile1_->setToolTip(fileName);
     }
 }
 
-void
-PythonCompareDialog::OnBrowseFile2()
+void PythonCompareDialog::OnBrowseFile2()
 {
     QString fileName = osiFile2_->text();
 
-    fileName = QFileDialog::getOpenFileName(this,
-            tr("Open OSI GroundTruth Files"), "", tr("All Files (*)"));
+    fileName = QFileDialog::getOpenFileName(this, tr("Open OSI GroundTruth Files"), "", tr("All Files (*)"));
 
-    if(!fileName.isEmpty())
+    if (!fileName.isEmpty())
     {
         osiFile2_->setText(fileName);
         osiFile2_->setToolTip(fileName);
     }
 }
 
-void
-PythonCompareDialog::OnRun()
+void PythonCompareDialog::OnRun()
 {
     static const std::string tmpLog = "python_compare_log.txt";
     remove(tmpLog.c_str());
     logWin_->clear();
 
     QString script = scripts_->currentText();
-    if( script.isEmpty() == false &&
-        osiFile1_->text().isEmpty() == false &&
-        osiFile2_->text().isEmpty() == false )
+    if (script.isEmpty() == false && osiFile1_->text().isEmpty() == false && osiFile2_->text().isEmpty() == false)
     {
-        std::string command = "python " +
-                              scriptPath_.toStdString() +
-                              "Resources/Python/";
+        std::string command = "python " + scriptPath_.toStdString() + "Resources/Python/";
         command += script.toStdString();
         command += " " + osiFile1_->text().toStdString();
         command += " " + osiFile2_->text().toStdString();
@@ -124,11 +112,12 @@ PythonCompareDialog::OnRun()
         system(command.c_str());
 
         std::ifstream pLog(tmpLog.c_str());
-        if(pLog.is_open())
+        if (pLog.is_open())
         {
             logWin_->append(tr("---- Start Running ") + script + tr(" ----"));
 
-            while (!pLog.good()){
+            while (!pLog.good())
+            {
                 std::string s;
                 getline(pLog, s);
                 logWin_->append(QString::fromStdString(s));
@@ -140,31 +129,26 @@ PythonCompareDialog::OnRun()
     else
     {
         QString errMsg;
-        if(script.isEmpty())
+        if (script.isEmpty())
             errMsg += "No python script found!\n";
 
-        if(osiFile1_->text().isEmpty())
+        if (osiFile1_->text().isEmpty())
             errMsg += "OSI file 1 is empty!\n";
 
-        if(osiFile2_->text().isEmpty())
+        if (osiFile2_->text().isEmpty())
             errMsg += "OSI file 2 is empty!\n";
 
-        QMessageBox::critical(nullptr,
-                              "Error",
-                              errMsg,
-                              QMessageBox::Ok,
-                              QMessageBox::Ok);
+        QMessageBox::critical(nullptr, "Error", errMsg, QMessageBox::Ok, QMessageBox::Ok);
     }
 }
 
-void
-PythonCompareDialog::OnExport()
+void PythonCompareDialog::OnExport()
 {
-    QString fileNamePyLog = QFileDialog::getSaveFileName(this,
-            tr("Save Python Validation Results"), "", tr("All Files (*)"));
+    QString fileNamePyLog =
+        QFileDialog::getSaveFileName(this, tr("Save Python Validation Results"), "", tr("All Files (*)"));
 
     std::ofstream pythonLog(fileNamePyLog.toStdString().c_str());
-    if(pythonLog.is_open())
+    if (pythonLog.is_open())
     {
         pythonLog << logWin_->toPlainText().toStdString();
     }
@@ -172,14 +156,14 @@ PythonCompareDialog::OnExport()
     pythonLog.close();
 }
 
-void
-PythonCompareDialog::InitScriptsSelection()
+void PythonCompareDialog::InitScriptsSelection()
 {
-    QDirIterator it(scriptPath_ + tr("/Resources/Python/"), QStringList() << "*.py", QDir::Files);
+    QDirIterator it("application/adp/bmw/tools/simulation/lime_osi/osi_visualizer/resources/Python/",
+                    QStringList() << "*.py",
+                    QDir::Files);
     while (it.hasNext())
     {
         it.next();
         scripts_->addItem(it.fileName());
     }
 }
-

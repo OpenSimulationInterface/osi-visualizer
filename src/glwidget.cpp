@@ -3,12 +3,12 @@
 #endif
 
 #include "glwidget.h"
-#include "glvehicle.h"
-#include "gltriangle.h"
-#include "glpoint.h"
-#include "global.h"
-#include "glfieldofview.h"
 #include "customtreewidgetitem.h"
+#include "glfieldofview.h"
+#include "global.h"
+#include "glpoint.h"
+#include "gltriangle.h"
+#include "glvehicle.h"
 
 //#include <QMutex>
 #include <QDebug>
@@ -18,69 +18,65 @@
 
 #include <cmath>
 
-//QMutex mutex;
-//QMutex mutex2;
+// QMutex mutex;
+// QMutex mutex2;
 
 GLWidget::GLWidget(QWidget* parent,
                    IMessageSource* msgSource,
                    QMap<ObjectType, QTreeWidgetItem*>& treeNodes,
                    const AppConfig& config)
-    : QOpenGLWidget(parent)
-    , minCameraY_(0)
-    , ignoreUpdate_(false)
-    , isOpenGLInitizalized_(false)
-    , uniformMvpLocation_(0)
-    , uniformColorLocation_(0)
-    , uniformUseTextureLocation_(0)
-    , currentDataType_(DataType::SensorView)
-    , camera_(nullptr)
-    , mousePos_()
-    , config_(config)
-    , lanes_()
-    , pressedKeys_()
-    , sceneKeys_()
-    , msgSource_(msgSource)
-    , isFirstMsgReceived_(false)
-    , selectedObject_(nullptr)
-    , projectionMatrix_()
-    , staticObjects_()
-    , simulationObjects_()
-    , shaderProgram_()
-    , treeNodes_(treeNodes)
-    , showFOV_(false)
-    , objFOV_(nullptr)
+    : QOpenGLWidget(parent),
+      minCameraY_(0),
+      ignoreUpdate_(false),
+      isOpenGLInitizalized_(false),
+      uniformMvpLocation_(0),
+      uniformColorLocation_(0),
+      uniformUseTextureLocation_(0),
+      currentDataType_(DataType::SensorView),
+      camera_(nullptr),
+      mousePos_(),
+      config_(config),
+      lanes_(),
+      pressedKeys_(),
+      sceneKeys_(),
+      msgSource_(msgSource),
+      isFirstMsgReceived_(false),
+      selectedObject_(nullptr),
+      projectionMatrix_(),
+      staticObjects_(),
+      simulationObjects_(),
+      shaderProgram_(),
+      treeNodes_(treeNodes),
+      showFOV_(false),
+      objFOV_(nullptr)
 {
     installEventFilter(this);
 }
 
-void
-GLWidget::UpdateIMessageSource(IMessageSource* msgSource)
+void GLWidget::UpdateIMessageSource(IMessageSource* msgSource)
 {
     msgSource_ = msgSource;
 }
 
-void
-GLWidget::UpdateFOVPaint(const bool showFOV)
+void GLWidget::UpdateFOVPaint(const bool showFOV)
 {
     showFOV_ = showFOV;
     this->update();
 }
 
-void
-GLWidget::UpdateFOVParam(const float minRadius,
-                         const float maxRadius,
-                         const float azimuthPosAngle,
-                         const float azimuthNegAngle)
+void GLWidget::UpdateFOVParam(const float minRadius,
+                              const float maxRadius,
+                              const float azimuthPosAngle,
+                              const float azimuthNegAngle)
 {
     objFOV_->UpdateParameter(minRadius, maxRadius, azimuthPosAngle, azimuthNegAngle);
     objFOV_->UpdateVertexBuffer();
     UpdateFOVPaint(true);
 }
 
-void
-GLWidget::initializeGL()
+void GLWidget::initializeGL()
 {
-    if(!initializeOpenGLFunctions())
+    if (!initializeOpenGLFunctions())
     {
         qDebug() << "failed to initialize OpenGL functions";
         return;
@@ -93,28 +89,25 @@ GLWidget::initializeGL()
     // By disabling the depth test (should be disabled by default anyway) we can overcome this issue.
     // It is important now to draw the objects in the correct order, the top one has to be rendered at the end.
 
-
     glDisable(GL_DEPTH_TEST);
-    //glDepthFunc(GL_LESS);
+    // glDepthFunc(GL_LESS);
     glEnable(GL_TEXTURE_2D);
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
     // Not necessary for the current scenarios
-    //glEnable(GL_CULL_FACE);
+    // glEnable(GL_CULL_FACE);
 
-    //glEnable(GL_BLEND);
-    //glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE);
-    //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    // glEnable(GL_BLEND);
+    // glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE);
+    // glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     glClearColor(0, 0, 0, 1);
-
-
 
     // TODO: Check if min required versions of OpenGL and GLSL is available (4.3)
     QString version = QString::fromLatin1((const char*)glGetString(GL_VERSION));
     qDebug() << "OpenGL version: " + version;
 
-    shaderProgram_.addShaderFromSourceFile(QOpenGLShader::Vertex, config_.srcPath_ + "Resources/Shaders/VertexShader.vert");
-    shaderProgram_.addShaderFromSourceFile(QOpenGLShader::Fragment, config_.srcPath_ + "Resources/Shaders/FragmentShader.frag");
+    shaderProgram_.addShaderFromSourceFile(QOpenGLShader::Vertex, "./resources/Shaders/VertexShader.vert");
+    shaderProgram_.addShaderFromSourceFile(QOpenGLShader::Fragment, "./resources/Shaders/FragmentShader.frag");
     shaderProgram_.link();
     shaderProgram_.bind();
 
@@ -145,10 +138,9 @@ GLWidget::initializeGL()
     isOpenGLInitizalized_ = true;
 }
 
-void
-GLWidget::resizeGL(int width, int height)
+void GLWidget::resizeGL(int width, int height)
 {
-    if(isOpenGLInitizalized_)
+    if (isOpenGLInitizalized_)
     {
         projectionMatrix_.setToIdentity();
         projectionMatrix_.perspective(45.0f, (float)width / height, 0.001f, 1000.0f);
@@ -156,26 +148,25 @@ GLWidget::resizeGL(int width, int height)
     }
 }
 
-void
-GLWidget::paintGL()
+void GLWidget::paintGL()
 {
     // This is already done at this point
-    //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // Depth test is disabled, thus the static objects (i.e. grid) will be drawn first.
     // Afterwards the lanes, then the vehicles etc. are drawn, the texts are the last ones.
     foreach (GLObject* staticObject, staticObjects_)
     {
-        if(staticObject->isVisible_)
+        if (staticObject->isVisible_)
             RenderObject(staticObject);
     }
 
-    //mutex2.lock();
+    // mutex2.lock();
     if (!ignoreUpdate_)
     {
         foreach (Lane* lane, lanes_)
         {
-            if(lane->isVisible_)
+            if (lane->isVisible_)
             {
                 foreach (GLLaneMarking* laneMarking, lane->glLaneMarkings_)
                 {
@@ -184,13 +175,13 @@ GLWidget::paintGL()
             }
         }
     }
-    //mutex2.unlock();
+    // mutex2.unlock();
 
     // TODO: Mutex for object list?
-    //mutex.lock();
+    // mutex.lock();
     foreach (GLObject* object, simulationObjects_)
     {
-        if(object->isVisible_)
+        if (object->isVisible_)
             RenderObject(object);
     }
 
@@ -202,13 +193,12 @@ GLWidget::paintGL()
         }
     }
 
-    if(showFOV_)
+    if (showFOV_)
         RenderObject(objFOV_);
-    //mutex.unlock();
+    // mutex.unlock();
 }
 
-void
-GLWidget::RenderObject(GLObject* object)
+void GLWidget::RenderObject(GLObject* object)
 {
     if (!object->isVisible_ || object->forceInvisible_)
     {
@@ -216,8 +206,7 @@ GLWidget::RenderObject(GLObject* object)
     }
 
     bool useTexture = (object->textureId_ != -1);
-    shaderProgram_.setUniformValue(uniformUseTextureLocation_,
-                                   useTexture);
+    shaderProgram_.setUniformValue(uniformUseTextureLocation_, useTexture);
 
     shaderProgram_.setUniformValue(uniformMvpLocation_,
                                    projectionMatrix_ * camera_->viewMatrix_ * object->modelMatrix_);
@@ -240,8 +229,7 @@ GLWidget::RenderObject(GLObject* object)
     glDrawArrays(object->GetPrimitiveType(), 0, object->vertices_.size());
 }
 
-void
-GLWidget::KeyPressed(QSet<int> pressedKeys)
+void GLWidget::KeyPressed(QSet<int> pressedKeys)
 {
     /*
     if (pressedKeys.contains(Qt::Key::Key_F2))
@@ -255,13 +243,12 @@ GLWidget::KeyPressed(QSet<int> pressedKeys)
     */
 }
 
-void
-GLWidget::MouseWheel(QWheelEvent* event)
+void GLWidget::MouseWheel(QWheelEvent* event)
 {
     float delta = -event->angleDelta().y() / 10.0f;
     camera_->Translate(0, delta, 0);
     // TODO: Should the camera trigger an event whenever its position has changed? (signal/slot)
-    //grid->SetPosition(0, -camera->GetPosition().y() / 30, 0);
+    // grid->SetPosition(0, -camera->GetPosition().y() / 30, 0);
     this->update();
 
     /*
@@ -273,7 +260,8 @@ GLWidget::MouseWheel(QWheelEvent* event)
 }
 
 // TODO: Move this somewhere else
-int signum(int val) {
+int signum(int val)
+{
     if ((0 < val) - (val < 0) == 1)
     {
         return 1;
@@ -281,10 +269,9 @@ int signum(int val) {
     return -1;
 }
 
-bool
-GLWidget::eventFilter(QObject* obj, QEvent* event)
+bool GLWidget::eventFilter(QObject* obj, QEvent* event)
 {
-    if(event->type() == QEvent::KeyPress)
+    if (event->type() == QEvent::KeyPress)
     {
         int key = ((QKeyEvent*)event)->key();
         if (sceneKeys_.contains(key))
@@ -298,7 +285,7 @@ GLWidget::eventFilter(QObject* obj, QEvent* event)
             event->ignore();
         }
     }
-    else if(event->type() == QEvent::KeyRelease)
+    else if (event->type() == QEvent::KeyRelease)
     {
         int key = ((QKeyEvent*)event)->key();
         if (sceneKeys_.contains(key))
@@ -379,40 +366,34 @@ GLWidget::eventFilter(QObject* obj, QEvent* event)
     return false;
 }
 
-void
-GLWidget::ResetCameraAll()
+void GLWidget::ResetCameraAll()
 {
     camera_->ResetAll();
     ResetObjectTextOrientations();
     this->update();
 }
 
-void
-GLWidget::ResetCameraOrient()
+void GLWidget::ResetCameraOrient()
 {
     camera_->ResetOrientation();
     ResetObjectTextOrientations();
     this->update();
 }
 
-void
-GLWidget::ResetObjectTextOrientations()
+void GLWidget::ResetObjectTextOrientations()
 {
-    //mutex.lock();
-    foreach(GLObject* object, simulationObjects_)
+    // mutex.lock();
+    foreach (GLObject* object, simulationObjects_)
     {
         if (object->GetTextObject())
         {
             object->GetTextObject()->SetOrientation(0);
         }
     }
-    //mutex.unlock();
+    // mutex.unlock();
 }
 
-
-void
-GLWidget::MessageParsed(const Message& message,
-                        const LaneMessage& laneMessage)
+void GLWidget::MessageParsed(const Message& message, const LaneMessage& laneMessage)
 {
     // The check for a connected receiver is necessary because the signals for received messages
     // the receiver emits are asynchronous. It sometimes happens that after the receiver disconnected,
@@ -431,14 +412,15 @@ GLWidget::MessageParsed(const Message& message,
     QVector<GLObject*> objectControlList(simulationObjects_);
     QVector<Lane*> laneControlList(lanes_);
 
-    for (const auto &msg: message)
+    for (const auto& msg : message)
     {
         bool found = false;
         GLObject* currentObject = nullptr;
 
         if (!msg.id.isEmpty())
         {
-            foreach (GLObject* object, simulationObjects_) {
+            foreach (GLObject* object, simulationObjects_)
+            {
                 if (object->id_ == msg.id)
                 {
                     found = true;
@@ -455,7 +437,7 @@ GLWidget::MessageParsed(const Message& message,
                     object->isVisible_ = true;
                     object->SetPosition(msg.position, false);
 
-                    if(msg.basePoly.size() == 4)
+                    if (msg.basePoly.size() == 4)
                     {
                         object->vertices_.clear();
                         object->vertices_ << msg.basePoly[0] << msg.basePoly[1] << msg.basePoly[2] << msg.basePoly[3];
@@ -465,10 +447,10 @@ GLWidget::MessageParsed(const Message& message,
                     {
                         osi3::Dimension3d dimension = msg.dimension;
                         object->vertices_.clear();
-                        object->vertices_ << QVector3D(-dimension.width()/2, 0, dimension.length()/2)
-                                          << QVector3D(dimension.width()/2, 0, dimension.length()/2)
-                                          << QVector3D(dimension.width()/2, 0, -dimension.length()/2)
-                                          << QVector3D(-dimension.width()/2, 0, -dimension.length()/2);
+                        object->vertices_ << QVector3D(-dimension.width() / 2, 0, dimension.length() / 2)
+                                          << QVector3D(dimension.width() / 2, 0, dimension.length() / 2)
+                                          << QVector3D(dimension.width() / 2, 0, -dimension.length() / 2)
+                                          << QVector3D(-dimension.width() / 2, 0, -dimension.length() / 2);
                         object->SetOrientation(msg.orientation + M_PI_2);
                     }
                     object->UpdateVertexBuffer();
@@ -505,13 +487,12 @@ GLWidget::MessageParsed(const Message& message,
 
             GLObject* newObject;
 
-            if ( type == ObjectType::Car ||
-                 type == ObjectType::Truck ||
-                 type == ObjectType::MotorBike ||
-                 type == ObjectType::Bicycle )
+            if (type == ObjectType::Car || type == ObjectType::Truck || type == ObjectType::MotorBike ||
+                type == ObjectType::Bicycle)
             {
-                if(msg.basePoly.size() == 4)
-                    newObject = new GLVehicle(this, msg.id, msg.basePoly[0], msg.basePoly[1], msg.basePoly[2], msg.basePoly[3]);
+                if (msg.basePoly.size() == 4)
+                    newObject =
+                        new GLVehicle(this, msg.id, msg.basePoly[0], msg.basePoly[1], msg.basePoly[2], msg.basePoly[3]);
                 else
                     newObject = new GLVehicle(this, msg.id, msg.dimension.length(), msg.dimension.width());
             }
@@ -529,9 +510,9 @@ GLWidget::MessageParsed(const Message& message,
             newObject->GetTextObject()->SetOrientation(camera_->GetOrientation());
             // TODO: Actually, the text position has to be set here already
             // But the next data update will most propably directly follow
-            //mutex.lock();
+            // mutex.lock();
             simulationObjects_.append(newObject);
-            //mutex.unlock();
+            // mutex.unlock();
         }
 
         // No "Set" method here, these values do not affect the simulation
@@ -559,12 +540,12 @@ GLWidget::MessageParsed(const Message& message,
         }
     }
 
-    for (const auto &laneMsg: laneMessage)
+    for (const auto& laneMsg : laneMessage)
     {
         bool found = false;
         QVector<QVector<QVector3D> > laneMarkers;
 
-        if(config_.laneType_ == LaneType::CenterLanes)
+        if (config_.laneType_ == LaneType::CenterLanes)
         {
             laneMarkers = laneMsg.centerLanes;
         }
@@ -590,11 +571,11 @@ GLWidget::MessageParsed(const Message& message,
 
         if (!found)
         {
-            //qDebug() << "New lane: " << laneMessage.ids.at(i);
+            // qDebug() << "New lane: " << laneMessage.ids.at(i);
             Lane* newLane = new Lane(laneMsg.id, laneMarkers, this);
-            //mutex2.lock();
+            // mutex2.lock();
             lanes_.append(newLane);
-            //mutex2.unlock();
+            // mutex2.unlock();
         }
     }
 
@@ -614,7 +595,7 @@ GLWidget::MessageParsed(const Message& message,
                     object->alreadyInObjectTree_ = false;
                     if (camera_->trackedObject_ == object)
                     {
-//                        StopTracking();
+                        //                        StopTracking();
                         camera_->trackedObject_ = nullptr;
                     }
                     break;
@@ -623,7 +604,7 @@ GLWidget::MessageParsed(const Message& message,
 
             if (object->GetTextObject())
             {
-               object->GetTextObject()->isVisible_ = false;
+                object->GetTextObject()->isVisible_ = false;
             }
         }
     }
@@ -641,8 +622,7 @@ GLWidget::MessageParsed(const Message& message,
     this->update();
 }
 
-void
-GLWidget::TreeItemChanged(QTreeWidgetItem* item, int column)
+void GLWidget::TreeItemChanged(QTreeWidgetItem* item, int column)
 {
     CustomTreeWidgetItem* customItem = (CustomTreeWidgetItem*)item;
     GLObject* glObject = customItem->glObject_;
@@ -660,8 +640,7 @@ GLWidget::TreeItemChanged(QTreeWidgetItem* item, int column)
 
 // Qt does not prevent the "Click" event when "DoubleClick" occurs.
 // Thus we have to determine a double click by ourselves.
-void
-GLWidget::TreeItemClicked(QTreeWidgetItem* item, int column)
+void GLWidget::TreeItemClicked(QTreeWidgetItem* item, int column)
 {
     if (treeNodes_.values().contains(item))
     {
@@ -709,7 +688,7 @@ GLWidget::TreeItemClicked(QTreeWidgetItem* item, int column)
     {
         if (!camera_->trackedObject_)
         {
-            //camera->trackedObject_ = nullptr;
+            // camera->trackedObject_ = nullptr;
             camera_->SetToObjectPosition(object);
         }
     }
@@ -727,8 +706,7 @@ GLWidget::TreeItemClicked(QTreeWidgetItem* item, int column)
     this->update();
 }
 
-void
-GLWidget::Connected(DataType dataType)
+void GLWidget::Connected(DataType dataType)
 {
     selectedObject_ = nullptr;
     currentDataType_ = dataType;
@@ -750,20 +728,19 @@ GLWidget::Connected(DataType dataType)
         objectsToRemove.append(object);
     }
 
-    //mutex.lock();
+    // mutex.lock();
     foreach (GLObject* object, objectsToRemove)
     {
         simulationObjects_.removeAll(object);
     }
-    //mutex.unlock();
+    // mutex.unlock();
 
     this->update();
 }
 
-void
-GLWidget::Disconnected()
+void GLWidget::Disconnected()
 {
-    //selectedObject = nullptr;
+    // selectedObject = nullptr;
     isFirstMsgReceived_ = true;
 
     foreach (QTreeWidgetItem* item, treeNodes_)
@@ -781,24 +758,22 @@ GLWidget::Disconnected()
         objectsToRemove.append(object);
     }
 
-    //mutex.lock();
+    // mutex.lock();
     foreach (GLObject* object, objectsToRemove)
     {
         simulationObjects_.removeAll(object);
     }
-    //mutex.unlock();
+    // mutex.unlock();
 
-//    StopTracking();
+    //    StopTracking();
     camera_->trackedObject_ = nullptr;
 
     this->update();
 }
 
-void
-GLWidget::StartTracking()
+void GLWidget::StartTracking()
 {
-    if( selectedObject_ != nullptr &&
-        camera_->trackedObject_ == selectedObject_ )
+    if (selectedObject_ != nullptr && camera_->trackedObject_ == selectedObject_)
     {
         return;
     }
@@ -819,15 +794,14 @@ GLWidget::StartTracking()
     emit SetTrackingEnabled(false);
 }
 
-//void
-//GLWidget::StopTracking()
+// void
+// GLWidget::StopTracking()
 //{
 //    camera_->trackedObject_ = nullptr;
 //    emit SetTrackingEnabled(true);
 //}
 
-void
-GLWidget::UpdateGrid()
+void GLWidget::UpdateGrid()
 {
     if (isOpenGLInitizalized_)
     {
@@ -835,5 +809,3 @@ GLWidget::UpdateGrid()
         this->update();
     }
 }
-
-

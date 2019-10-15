@@ -1,8 +1,7 @@
 #include "glpoint.h"
 #include <QtMath>
 
-GLPoint::GLPoint(QOpenGLFunctions_4_3_Core* functions, QString id) 
-    : GLObject(GL_TRIANGLE_FAN, functions, id)
+GLPoint::GLPoint(QOpenGLFunctions_4_3_Core* functions, QString id) : GLObject(GL_TRIANGLE_FAN, functions, id)
 {
     int slices = 30;
     float radius = 0.3f;

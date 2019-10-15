@@ -1,7 +1,6 @@
 #include "glfieldofview.h"
 #include <QtMath>
 
-
 GLFieldOfView::GLFieldOfView(QOpenGLFunctions_4_3_Core* functions,
                              const float minRadius,
                              const float maxRadius,
@@ -12,12 +11,10 @@ GLFieldOfView::GLFieldOfView(QOpenGLFunctions_4_3_Core* functions,
     UpdateParameter(minRadius, maxRadius, azimuthPosAngle, azimuthNegAngle);
 }
 
-
-void
-GLFieldOfView::UpdateParameter(const float minRadius,
-                               const float maxRadius,
-                               const float azimuthPosAngle,
-                               const float azimuthNegAngle)
+void GLFieldOfView::UpdateParameter(const float minRadius,
+                                    const float maxRadius,
+                                    const float azimuthPosAngle,
+                                    const float azimuthNegAngle)
 {
     vertices_.clear();
 
@@ -54,7 +51,3 @@ GLFieldOfView::UpdateParameter(const float minRadius,
         vertices_ << outCurve[i];
     }
 }
-
-
-
-

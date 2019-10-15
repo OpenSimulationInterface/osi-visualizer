@@ -4,13 +4,10 @@
 ///
 /// @brief
 ///
-
-
-#pragma once
-
+#ifndef OSI_VISUALIZER_UTILS_H
+#define OSI_VISUALIZER_UTILS_H
 #include <stdint.h>
 
 template <typename T>
 uint64_t GetTimeStampInNanoSecond(const T& data);
-
-
+#endif  // OSI_VISUALIZER_UTILS_H

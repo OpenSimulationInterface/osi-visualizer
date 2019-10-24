@@ -12,4 +12,4 @@ before_install:
 
 # Run the build script.
 script:
-        - docker run -it -v $(pwd):/project osi-standard/osi-visualizer /bin/sh -c "mkdir -p build && cd build && cmake .. && cmake --build ."
+    - docker run -it -v $(pwd):/project osi-standard/osi-visualizer /bin/sh -c "mkdir -p build && cd build && cmake .. && cmake --build ."

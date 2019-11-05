@@ -36,7 +36,7 @@ or just manually if dependecies are already installed:
 ```bash
 $ git clone https://github.com/OpenSimulationInterface/osi-visualizer.git
 $ cd osi-visualizer
-$ git clone https://github.com/OpenSimulationInterface/open-simulation-interface
+$ git submodule update --init
 $ mkdir build
 $ cd build
 $ cmake ..

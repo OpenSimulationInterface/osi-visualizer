@@ -63,7 +63,7 @@ echo "
 # Installing OSI 3                                                                    
 #################################
 "
-git clone https://github.com/OpenSimulationInterface/open-simulation-interface.git;
+git submodule update --init
 cd open-simulation-interface;
 git clone https://github.com/OpenSimulationInterface/proto2cpp.git;
 mkdir -p build;

@@ -26,9 +26,26 @@ Currently we recommend users to use the osi-visualizer under Ubuntu Linux 18.04 
 * [FMILibrary](https://svn.jmodelica.org/FMILibrary/tags) (>= 2.0.2)
 * [OSI](https://github.com/OpenSimulationInterface/open-simulation-interface.git) (>= 3.1.2) 
 
+
+It is often a good idea to first update the system using
+
+```bash
+$ sudo apt-get update && sudo apt-get upgrade && sudo apt-get autoremove
+```
+
+to ensure up-to-date packages.
+
+You can install package dependencies using the provided `install-deps.sh`, and OSI and FMILibrary build dependencies using the provided `build-install-build-deps.sh`:
+
+```bash
+$ sudo bash install-deps.sh
+$ sudo bash build-install-build-deps.sh
+```
+
 #### Build and run
 ```bash
-$ bash install.sh
+$ bash build.sh
+$ ./build/osi-visualizer
 ```
 
 or just manually if dependecies are already installed:

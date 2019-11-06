@@ -44,7 +44,7 @@ to ensure up-to-date packages.
 #### Build and run
 ```bash
 $ bash build.sh
-$ ./osi-visualizer
+$ ./build/osi-visualizer
 ```
 
 or just manually if dependecies are already installed:

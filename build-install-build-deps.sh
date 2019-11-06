@@ -66,5 +66,3 @@ Building FMI library...
     echo "Could not install the fmi-library into usr/local"
   fi
 fi
-
-cd ..

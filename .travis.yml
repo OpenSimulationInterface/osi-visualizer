@@ -10,17 +10,6 @@ services:
 before_install:
     - docker build -t osi-standard/osi-visualizer .
 
-jobs:
-  include:    
-    # Run the build script and generate documentation.
-    - stage: Test
-      
-      name: Docker Build
-      script:
-          - docker run -it -v $(pwd):/project osi-standard/osi-visualizer /bin/sh -c "mkdir -p build && cd build && cmake .. && cmake --build ."
-
-    - script:
-          - sudo bash install-deps.sh
-          - sudo bash build-install-build-deps.sh
-          - bash build.sh
-      name: Normal Build
+# Run the build script.
+script:
+    - docker run -it -v $(pwd):/project osi-standard/osi-visualizer /bin/sh -c "mkdir -p build && cd build && cmake .. && cmake --build ."

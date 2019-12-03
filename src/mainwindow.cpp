@@ -334,7 +334,7 @@ void MainWindow::LoadFileBrowse()
 {
     QString fileName = ui_->loadFile->text();
 
-    fileName = QFileDialog::getOpenFileName(this, tr("Load file"), fileName, tr("Text Files (*.txt)"));
+    fileName = QFileDialog::getOpenFileName(this, tr("Load file"), fileName, tr("OSI Files (*.txt *.osi)"));
 
     if (!fileName.isEmpty())
     {
@@ -353,7 +353,7 @@ void MainWindow::LoadFileBrowse2()
 {
     QString fileName = ui_->loadFile_2->text();
 
-    fileName = QFileDialog::getOpenFileName(this, tr("Load file"), fileName, tr("Text Files (*.txt)"));
+    fileName = QFileDialog::getOpenFileName(this, tr("Load file"), fileName, tr("OSI Files (*.txt *.osi)"));
 
     if (!fileName.isEmpty())
     {

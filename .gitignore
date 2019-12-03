@@ -36,6 +36,7 @@ proto/generated/
 
 # build folder
 build
+cmake-build-debug
 osi-visualizer
 
 # Qtcreator project file
@@ -43,3 +44,7 @@ CMakeLists.txt.user
 
 # Config file
 appconfig.xml
+
+# Directories
+.idea/
+.vscode/

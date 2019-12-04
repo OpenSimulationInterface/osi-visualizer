@@ -26,7 +26,7 @@ class OsiReader : public QObject, public IMessageSource
     Q_OBJECT
 
   public:
-    OsiReader(int* deltaDelay, const bool& enableSendOut, const std::string& pubPortNum, int socketType);
+    OsiReader(const int* deltaDelay, const bool& enableSendOut, std::string  pubPortNum, int socketType);
 
     QString SetupConnection(bool enable);
 

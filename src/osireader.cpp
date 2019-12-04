@@ -9,6 +9,7 @@
 
 #include <string>
 #include <iomanip>
+#include <utility>
 #include <vector>
 #include <cstdio>
 #include <cstdlib>
@@ -19,11 +20,11 @@ int read_bytes(char *message_buf, size_t size, FILE *fd) {
     while (already_read < size) {
         int ret = fread(message_buf + already_read, sizeof(message_buf[0]), size - already_read, fd);
         if (ret < 0) {
-            printf("Failed to read\n");
+            std::cout << "Failed to read" << std::endl;
             return -3;
         }
         if (ret == 0) {
-            printf("Unexpected end of file\n");
+            std::cout << "Unexpected end of file" << std::endl;
             return -4;
         }
         already_read += ret;
@@ -33,8 +34,8 @@ int read_bytes(char *message_buf, size_t size, FILE *fd) {
 int realloc_buffer(char **message_buf, size_t new_size) {
     char *new_ptr = *message_buf;
     new_ptr = (char *)realloc(new_ptr, new_size);
-    if (new_ptr == NULL) {
-        printf("Failed to allocate buffer memory\n");
+    if (new_ptr == nullptr) {
+        std::cout << "Failed to allocate buffer memory" << std::endl;
         return -1;
     }
     *message_buf = new_ptr;
@@ -42,7 +43,7 @@ int realloc_buffer(char **message_buf, size_t new_size) {
 }
 
 
-OsiReader::OsiReader(int* deltaDelay, const bool& enableSendOut, const std::string& pubPortNum, int socketType)
+OsiReader::OsiReader(const int* deltaDelay, const bool& enableSendOut, std::string  pubPortNum, int socketType)
     : IMessageSource(),
       isRunning_(false),
       isReadTerminated_(false),
@@ -56,29 +57,13 @@ OsiReader::OsiReader(int* deltaDelay, const bool& enableSendOut, const std::stri
       newIterStamp_(),
       deltaDelay_(deltaDelay),
       enableSendOut_(enableSendOut),
-      pubPortNumber_(pubPortNum),
+      pubPortNumber_(std::move(pubPortNum)),
       currentBuffer_(),
       socketType_(socketType),
       zmqContext_(1),
       zmqPublisher_(zmqContext_, socketType)
 {
 }
-
-std::string OsiReader::byte_seq_to_string( const unsigned char bytes[], std::size_t n )
-{
-    std::ostringstream stm ;
-    stm << std::hex << std::uppercase ;
-
-    for( std::size_t i = 0 ; i < n ; ++i )
-        stm << std::setw(2) << std::setfill( '0' ) << unsigned( bytes[i] ) ;
-
-
-    return stm.str() ;
-}
-
-
-template < std::size_t N > std::string byte_seq_to_string( const unsigned char( &byte_array )[N] )
-{ return byte_seq_to_string( byte_array, N ) ; }
 
 void OsiReader::StartReadFile(const QString& osiFileName, const DataType dataType)
 {
@@ -124,7 +109,7 @@ void OsiReader::StartReadFile(const QString& osiFileName, const DataType dataTyp
                 emit Connected(currentDataType_);
 
                 // update slider range in millisecond level
-                int sliderRange = (stamp2Offset_.crbegin()->first) / 1000000;
+                uint64_t sliderRange = (stamp2Offset_.crbegin()->first) / 1000000;
                 emit UpdateSliderRange(sliderRange);
 
                 QtConcurrent::run(this, &OsiReader::SendMessageLoop);
@@ -165,14 +150,12 @@ void OsiReader::StopReadFile()
 
 void OsiReader::SliderValueChanged(int newValue)
 {
-    //std::cout << "Slider changed!" << std::endl;
-    // TODO Fix Calue Change
     iterMutex_.lock();
     iterChanged_ = true;
     iterMutex_.unlock();
     const std::regex osi_regex("\\.osi");
 
-    uint64_t nanoTimeStamp = (int64_t)newValue * 1000000;
+    uint64_t nanoTimeStamp = (uint64_t)newValue * 1000000;
     for (newIterStamp_ = stamp2Offset_.begin(); newIterStamp_ != stamp2Offset_.end(); ++newIterStamp_)
     {
         if (newIterStamp_->first > nanoTimeStamp)
@@ -189,42 +172,40 @@ void OsiReader::SliderValueChanged(int newValue)
         if (std::regex_search(osiFileName_.toStdString().c_str(), osi_regex)){
 
             typedef unsigned int message_size_t;
-            FILE *fd = fopen(osiFileName_.toStdString().c_str(), "rb");
-            if (fd == NULL) {
+            FILE *fd = fopen(osiFileName_.toStdString().c_str(), "r");
+            if (fd == nullptr) {
                 perror("Open failed");
             }
 
             fseek(fd, newIterStamp_->second, SEEK_SET);
-            std::cout << "Newiter seconds" << newIterStamp_->second << std::endl;
 
             int is_ok = 1;
-            char *message_buf = NULL;
+            char *message_buf = nullptr;
             size_t buf_size = 0;
             while (is_ok) {
                 message_size_t size = 0;
                 int ret = fread(&size, sizeof(message_size_t), 1, fd);
                 if (ret == 0) {
-                    printf("End of file\n");
+                    std::cout << "End of trace" << std::endl;
                     break;
                 } else if (ret != 1) {
-                    printf("Failed to read the size of the message\n");
+                    std::cout << "Failed to read the size of the message" << std::endl;
                     is_ok = 0;
                 }
                 if (is_ok && size > buf_size) {
                     size_t new_size = size * 2;
                     if (realloc_buffer(&message_buf, new_size) < 0) {
                         is_ok = 0;
-                        printf("Failed to allocate memory\n");
+                        std::cout << "Failed to allocate memory" << std::endl;
                     } else {
                         buf_size = new_size;
                     }
                 }
                 if (is_ok) {
-                    //printf("Next message size: %d\n", size);
                     ret = read_bytes(message_buf, size, fd);
                     if (ret < 0) {
                         is_ok = 0;
-                        printf("Failed to read the message\n");
+                        std::cout << "Failed to read the message" << std::endl;
                     }
                 }
                 if (is_ok) {
@@ -236,10 +217,8 @@ void OsiReader::SliderValueChanged(int newValue)
                             uint64_t curStamp = ::GetTimeStampInNanoSecond<osi3::SensorView>(sv);
                             emit MessageSVSendout(sv);
                             SendOutMessage(message_str);
-                            std::cout << "First stamp: " << firstTimeStamp_ << std::endl;
-                            std::cout << "Current stamp: " << curStamp << std::endl;
                             // update slider value in millisecond level
-                            int sliderValue = (curStamp - firstTimeStamp_) / 1000000;
+                            uint64_t sliderValue = (curStamp - firstTimeStamp_) / 1000000;
                             emit UpdateSliderValue(sliderValue);
                             break;
                         }
@@ -251,7 +230,7 @@ void OsiReader::SliderValueChanged(int newValue)
                             emit MessageSDSendout(sd);
                             SendOutMessage(message_str);
                             // update slider value in millisecond level
-                            int sliderValue = (curStamp - firstTimeStamp_) / 1000000;
+                            uint64_t sliderValue = (curStamp - firstTimeStamp_) / 1000000;
                             emit UpdateSliderValue(sliderValue);
                             break;
                         }
@@ -265,16 +244,15 @@ void OsiReader::SliderValueChanged(int newValue)
         } else {
             std::ifstream inputFile(osiFileName_.toStdString().c_str());
             inputFile.seekg(newIterStamp_->second, std::ios_base::beg);
-            std::cout << "Newiter seconds: " << newIterStamp_->second << std::endl;
             int size_found = 0;
 
             std::string str_line_input;
             std::string str_line;
-            std::string str_backup = "";
+            std::string str_backup;
 
             while (getline(inputFile, str_line_input))
             {
-                if (str_backup != "")
+                if (!str_backup.empty())
                 {
                     str_line = str_backup;
                     str_backup = "";
@@ -298,10 +276,8 @@ void OsiReader::SliderValueChanged(int newValue)
                         uint64_t curStamp = ::GetTimeStampInNanoSecond<osi3::SensorView>(sv);
                         emit MessageSVSendout(sv);
                         SendOutMessage(str_line);
-                        std::cout << "First stamp: " << firstTimeStamp_ << std::endl;
-                        std::cout << "Current stamp: " << curStamp << std::endl;
                         // update slider value in millisecond level
-                        int sliderValue = (curStamp - firstTimeStamp_) / 1000000;
+                        uint64_t sliderValue = (curStamp - firstTimeStamp_) / 1000000;
                         emit UpdateSliderValue(sliderValue);
                         break;
                     }
@@ -315,7 +291,7 @@ void OsiReader::SliderValueChanged(int newValue)
                         emit MessageSDSendout(sd);
                         SendOutMessage(str_line);
                         // update slider value in millisecond level
-                        int sliderValue = (curStamp - firstTimeStamp_) / 1000000;
+                        uint64_t sliderValue = (curStamp - firstTimeStamp_) / 1000000;
                         emit UpdateSliderValue(sliderValue);
                         break;
                     }
@@ -342,7 +318,7 @@ void OsiReader::ReadHeader()
     {
         uint64_t timeStamp = std::strtoull(line.c_str(), &pEnd, 10);
         std::streamoff offset = std::strtol(pEnd, &pEnd, 10);
-        stamp2Offset_.push_back(std::make_pair(timeStamp, offset));
+        stamp2Offset_.emplace_back(timeStamp, offset);
     }
     inputHeader.close();
 }
@@ -357,38 +333,36 @@ bool OsiReader::CreateHeader(QString& errorMsg)
     const std::regex osi_regex("\\.osi");
 
     if (std::regex_search(osiFileName_.toStdString().c_str(), osi_regex)){
-        FILE *fd = fopen(osiFileName_.toStdString().c_str(), "rb");
-        if (fd == NULL) {
+        FILE *fd = fopen(osiFileName_.toStdString().c_str(), "r");
+        if (fd == nullptr) {
             perror("Open failed");
             return -1;
         }
         std::streamoff offset(0);
         std::streampos beginPos = ftell (fd);
 
-        //std::string message_length = "";
-        //std::string smessage_length = "";
         typedef unsigned int message_size_t;
 
         int is_ok = 1;
-        char *message_buf = NULL;
+        char *message_buf = nullptr;
         size_t buf_size = 0;
 
         while (is_ok && success) {
             message_size_t size = 0;
             int ret = fread(&size, sizeof(message_size_t), 1, fd);
             if (ret == 0) {
-                printf("End of file\n");
+                std::cout << "End of trace" << std::endl;
                 break;
             }
             else if (ret != 1) {
-                printf("Failed to read the size of the message\n");
+                std::cout << "Failed to read the size of the message" << std::endl;
                 is_ok = 0;
             }
             if (is_ok && size > buf_size) {
                 size_t new_size = size*2;
                 if (realloc_buffer(&message_buf, new_size) < 0) {
                     is_ok = 0;
-                    printf("Failed to allocate memory\n");
+                    std::cout << "Failed to allocate memory" << std::endl;
                 } else {
                     buf_size = new_size;
                 }
@@ -397,7 +371,7 @@ bool OsiReader::CreateHeader(QString& errorMsg)
                 ret = read_bytes(message_buf, size, fd);
                 if (ret < 0) {
                     is_ok = 0;
-                    printf("Failed to read the message\n");
+                    std::cout << "Failed to read the message" << std::endl;
                 }
             }
             if (is_ok) {
@@ -408,7 +382,7 @@ bool OsiReader::CreateHeader(QString& errorMsg)
                 else  // if(currentDataType_ == DataType::SensorData)
                     success = BuildUpStamps<osi3::SensorData>(isFirstMsg, firstTimeStamp, message_str, offset);
 
-                offset = ftell (fd) - beginPos - size;
+                offset = ftell (fd) - beginPos - size - sizeof(message_size_t);
             }
         }
 
@@ -418,8 +392,8 @@ bool OsiReader::CreateHeader(QString& errorMsg)
         std::ifstream inputFile(osiFileName_.toStdString().c_str(), std::ios::binary);
 
         std::string str_line_input;
-        std::string str_line="";
-        std::string str_backup = "";
+        std::string str_line;
+        std::string str_backup;
         size_t size_found;
 
         std::streampos beginPos = inputFile.tellg();
@@ -428,7 +402,7 @@ bool OsiReader::CreateHeader(QString& errorMsg)
 
         while (getline(inputFile, str_line_input) && success)
         {
-            if (str_backup != "")
+            if (!str_backup.empty())
             {
                 str_line = str_backup;
                 str_backup = "";
@@ -454,7 +428,7 @@ bool OsiReader::CreateHeader(QString& errorMsg)
         }
     }
 
-    if (stamp2Offset_.empty() || success == false)
+    if (stamp2Offset_.empty() || !success)
     {
         success = false;
         errorMsg = "Can not parse OSI::SensorData message!\n Wrong file format!\n";
@@ -516,8 +490,8 @@ void OsiReader::SendMessageLoop()
     std::regex osi_regex("\\.osi");
 
     if (std::regex_search(osiFileName_.toStdString().c_str(), osi_regex)){
-        FILE *fd = fopen(osiFileName_.toStdString().c_str(), "rb");
-        if (fd == NULL) {
+        FILE *fd = fopen(osiFileName_.toStdString().c_str(), "r");
+        if (fd == nullptr) {
             perror("Open failed");
         }
 
@@ -529,10 +503,10 @@ void OsiReader::SendMessageLoop()
                     bool isRefreshMessage(true);
                     typedef unsigned int message_size_t;
 
-                    std::string str_backup = "";
+                    std::string str_backup;
 
                     int is_ok = 1;
-                    char *message_buf = NULL;
+                    char *message_buf = nullptr;
                     size_t buf_size = 0;
 
                     while (is_ok && !isPaused_ && isRunning_) {
@@ -543,33 +517,32 @@ void OsiReader::SendMessageLoop()
                         message_size_t size = 0;
                         int ret = fread(&size, sizeof(message_size_t), 1, fd);
                         if (ret == 0) {
-                            printf("End of file\n");
+                            std::cout << "End of trace" << std::endl;
                             break;
                         } else if (ret != 1) {
-                            printf("Failed to read the size of the message\n");
+                            std::cout << "Failed to read the size of the message" << std::endl;
                             is_ok = 0;
                         }
                         if (is_ok && size > buf_size) {
                             size_t new_size = size * 2;
                             if (realloc_buffer(&message_buf, new_size) < 0) {
                                 is_ok = 0;
-                                printf("Failed to allocate memory\n");
+                                std::cout << "Failed to allocate memory" << std::endl;
                             } else {
                                 buf_size = new_size;
                             }
                         }
                         if (is_ok) {
-                            //printf("Next message size: %d\n", size);
                             ret = read_bytes(message_buf, size, fd);
                             if (ret < 0) {
                                 is_ok = 0;
-                                printf("Failed to read the message\n");
+                                std::cout << "Failed to read the message" << std::endl;
                             }
                         }
                         if (is_ok) {
                             std::string message_str(message_buf, message_buf + size);
 
-                            if (str_backup != "")
+                            if (!str_backup.empty())
                             {
                                 message_str = str_backup;
                                 str_backup = "";
@@ -627,7 +600,7 @@ void OsiReader::SendMessageLoop()
 
                 std::string str_line_input;
                 std::string str_line;
-                std::string str_backup = "";
+                std::string str_backup;
                 size_t size_found;
 
                 uint64_t preTimeStamp(0);
@@ -638,7 +611,7 @@ void OsiReader::SendMessageLoop()
                     if (iterChanged_)
                         break;
 
-                    if (str_backup != "")
+                    if (!str_backup.empty())
                     {
                         str_line = str_backup;
                         str_backup = "";
@@ -725,14 +698,12 @@ bool OsiReader::SendMessage(T& data,
         {
             firstTimeStamp_ = curStamp;
             isFirstMessage = false;
-            std::cout << "----------------> First time stamp: " << preTimeStamp << std::endl;
         }
 
         if (isRefreshMessage)
         {
             preTimeStamp = curStamp;
             isRefreshMessage = false;
-            std::cout << "----------------> Pre time stamp: " << preTimeStamp << std::endl;
         }
 
         int64_t sleep = curStamp - preTimeStamp;
@@ -747,7 +718,7 @@ bool OsiReader::SendMessage(T& data,
 
         SendOutMessage(message);
         // update slider value in millisecond level
-        int sliderValue = (curStamp - firstTimeStamp_) / 1000000;
+        uint64_t sliderValue = (curStamp - firstTimeStamp_) / 1000000;
         emit UpdateSliderValue(sliderValue);
 
         ++iterStamp_;

@@ -7,6 +7,7 @@
 #include <QMessageBox>
 
 #include <cmath>
+#include <string>
 
 /*
  *
@@ -68,8 +69,15 @@ void OsiParser::LocalMonitor(const T& data)
     {
         ++osiMsgNumber_;
 
+        unsigned int message_size = data.SerializeAsString().size();
+        unsigned char ch[4];
+        memcpy(ch, (char*)&message_size, sizeof(unsigned int));
+
+        osiMsgString_ += ch[0];
+        osiMsgString_ += ch[1];
+        osiMsgString_ += ch[2];
+        osiMsgString_ += ch[3];
         osiMsgString_ += data.SerializeAsString();
-        osiMsgString_ += "$$__$$";
     }
     else if (osiMsgNumber_ >= config_.osiMsgSaveThreshold_)
     {
@@ -566,16 +574,16 @@ void OsiParser::ParseSensorDataStationaryObject(Message& objectMessage,
 // Export Osi message
 void OsiParser::ExportOsiMessage()
 {
-    if (startSaveOSIMsg_ == false && osiMsgString_.empty() == true)
+    if (!startSaveOSIMsg_ && osiMsgString_.empty())
     {
         startSaveOSIMsg_ = true;
     }
-    else if (startSaveOSIMsg_ == true && osiMsgString_.empty() == false)
+    else if (startSaveOSIMsg_ && !osiMsgString_.empty())
     {
         startSaveOSIMsg_ = false;
 
-        QString fileName = QFileDialog::getSaveFileName(nullptr, "Export message to file", "", "*.txt");
-        if (fileName.isEmpty() == false)
+        QString fileName = QFileDialog::getSaveFileName(nullptr, "Export message to osi trace file", "", "*.osi");
+        if (!fileName.isEmpty())
         {
             QFile file(fileName);
             if (!file.open(QIODevice::WriteOnly))

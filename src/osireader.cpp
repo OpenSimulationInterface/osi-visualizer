@@ -590,6 +590,7 @@ void OsiReader::SendMessageLoop()
         fclose(fd);
     }
     else {
+        std::cout << "[WARNING]: The $$__$$ separated trace files will be completely removed in the near future and be replaced with the length separated OSI trace files. Please convert them to *.osi files with the converter in the main OSI repository or record the current trace file into the OSI format." << std::endl;
         std::ifstream inputFile(osiFileName_.toStdString().c_str(), std::ios::binary);
         while (isRunning_)
         {

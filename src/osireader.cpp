@@ -7,7 +7,43 @@
 #include "osireader.h"
 #include "utils.h"
 
-OsiReader::OsiReader(int* deltaDelay, const bool& enableSendOut, const std::string& pubPortNum, int socketType)
+#include <string>
+#include <iomanip>
+#include <utility>
+#include <vector>
+#include <cstdio>
+#include <cstdlib>
+#include <regex>
+
+int read_bytes(char *message_buf, size_t size, FILE *fd) {
+    size_t already_read = 0;
+    while (already_read < size) {
+        int ret = fread(message_buf + already_read, sizeof(message_buf[0]), size - already_read, fd);
+        if (ret < 0) {
+            std::cout << "Failed to read" << std::endl;
+            return -3;
+        }
+        if (ret == 0) {
+            std::cout << "Unexpected end of file" << std::endl;
+            return -4;
+        }
+        already_read += ret;
+    }
+}
+
+int realloc_buffer(char **message_buf, size_t new_size) {
+    char *new_ptr = *message_buf;
+    new_ptr = (char *)realloc(new_ptr, new_size);
+    if (new_ptr == nullptr) {
+        std::cout << "Failed to allocate buffer memory" << std::endl;
+        return -1;
+    }
+    *message_buf = new_ptr;
+    return 0;
+}
+
+
+OsiReader::OsiReader(const int* deltaDelay, const bool& enableSendOut, std::string  pubPortNum, int socketType)
     : IMessageSource(),
       isRunning_(false),
       isReadTerminated_(false),
@@ -21,7 +57,7 @@ OsiReader::OsiReader(int* deltaDelay, const bool& enableSendOut, const std::stri
       newIterStamp_(),
       deltaDelay_(deltaDelay),
       enableSendOut_(enableSendOut),
-      pubPortNumber_(pubPortNum),
+      pubPortNumber_(std::move(pubPortNum)),
       currentBuffer_(),
       socketType_(socketType),
       zmqContext_(1),
@@ -42,7 +78,7 @@ void OsiReader::StartReadFile(const QString& osiFileName, const DataType dataTyp
         if (fInfo.exists())
         {
             osiFileName_ = osiFileName;
-            osiHeaderName_ = osiFileName + "h";  // .txth is header file
+            osiHeaderName_ = osiFileName + "h";  //.txth is header file
 
             if (QFileInfo::exists(osiHeaderName_))
             {
@@ -73,7 +109,7 @@ void OsiReader::StartReadFile(const QString& osiFileName, const DataType dataTyp
                 emit Connected(currentDataType_);
 
                 // update slider range in millisecond level
-                int sliderRange = (stamp2Offset_.crbegin()->first) / 1000000;
+                uint64_t sliderRange = (stamp2Offset_.crbegin()->first) / 1000000;
                 emit UpdateSliderRange(sliderRange);
 
                 QtConcurrent::run(this, &OsiReader::SendMessageLoop);
@@ -117,8 +153,9 @@ void OsiReader::SliderValueChanged(int newValue)
     iterMutex_.lock();
     iterChanged_ = true;
     iterMutex_.unlock();
+    const std::regex osi_regex("\\.osi");
 
-    uint64_t nanoTimeStamp = (int64_t)newValue * 1000000;
+    uint64_t nanoTimeStamp = (uint64_t)newValue * 1000000;
     for (newIterStamp_ = stamp2Offset_.begin(); newIterStamp_ != stamp2Offset_.end(); ++newIterStamp_)
     {
         if (newIterStamp_->first > nanoTimeStamp)
@@ -132,63 +169,137 @@ void OsiReader::SliderValueChanged(int newValue)
 
     if (isPaused_)
     {
-        std::ifstream inputFile(osiFileName_.toStdString().c_str());
-        inputFile.seekg(newIterStamp_->second, std::ios_base::beg);
+        if (std::regex_search(osiFileName_.toStdString().c_str(), osi_regex)){
 
-        std::string str_line_input;
-        std::string str_line;
-        std::string str_backup = "";
-        size_t size_found;
-
-        while (getline(inputFile, str_line_input))
-        {
-            if (str_backup != "")
-            {
-                str_line = str_backup;
-                str_backup = "";
-            }
-            if ((size_found = str_line_input.find("$$__$$")) != std::string::npos)
-            {
-                str_line += str_line_input.substr(0, size_found);
-                str_backup = str_line_input.substr(size_found + 6) + "\n";
-            }
-            else
-            {
-                str_line += str_line_input + "\n";
-                continue;
+            typedef unsigned int message_size_t;
+            FILE *fd = fopen(osiFileName_.toStdString().c_str(), "r");
+            if (fd == nullptr) {
+                perror("Open failed");
             }
 
-            if (currentDataType_ == DataType::SensorView)
-            {
-                osi3::SensorView sv;
-                if (sv.ParseFromString(str_line))
-                {
-                    uint64_t curStamp = ::GetTimeStampInNanoSecond<osi3::SensorView>(sv);
-                    emit MessageSVSendout(sv);
-                    SendOutMessage(str_line);
-                    // update slider value in millisecond level
-                    int sliderValue = (curStamp - firstTimeStamp_) / 1000000;
-                    emit UpdateSliderValue(sliderValue);
+            fseek(fd, newIterStamp_->second, SEEK_SET);
+
+            int is_ok = 1;
+            char *message_buf = nullptr;
+            size_t buf_size = 0;
+            while (is_ok) {
+                message_size_t size = 0;
+                int ret = fread(&size, sizeof(message_size_t), 1, fd);
+                if (ret == 0) {
+                    std::cout << "End of trace" << std::endl;
                     break;
+                } else if (ret != 1) {
+                    std::cout << "Failed to read the size of the message" << std::endl;
+                    is_ok = 0;
+                }
+                if (is_ok && size > buf_size) {
+                    size_t new_size = size * 2;
+                    if (realloc_buffer(&message_buf, new_size) < 0) {
+                        is_ok = 0;
+                        std::cout << "Failed to allocate memory" << std::endl;
+                    } else {
+                        buf_size = new_size;
+                    }
+                }
+                if (is_ok) {
+                    ret = read_bytes(message_buf, size, fd);
+                    if (ret < 0) {
+                        is_ok = 0;
+                        std::cout << "Failed to read the message" << std::endl;
+                    }
+                }
+                if (is_ok) {
+                    std::string message_str(message_buf, message_buf + size);
+
+                    if (currentDataType_ == DataType::SensorView) {
+                        osi3::SensorView sv;
+                        if (sv.ParseFromString(message_str)) {
+                            uint64_t curStamp = ::GetTimeStampInNanoSecond<osi3::SensorView>(sv);
+                            emit MessageSVSendout(sv);
+                            SendOutMessage(message_str);
+                            // update slider value in millisecond level
+                            uint64_t sliderValue = (curStamp - firstTimeStamp_) / 1000000;
+                            emit UpdateSliderValue(sliderValue);
+                            break;
+                        }
+                    } else  // if(currentDataType_ == DataType::SensorData)
+                    {
+                        osi3::SensorData sd;
+                        if (sd.ParseFromString(message_str)) {
+                            uint64_t curStamp = ::GetTimeStampInNanoSecond<osi3::SensorData>(sd);
+                            emit MessageSDSendout(sd);
+                            SendOutMessage(message_str);
+                            // update slider value in millisecond level
+                            uint64_t sliderValue = (curStamp - firstTimeStamp_) / 1000000;
+                            emit UpdateSliderValue(sliderValue);
+                            break;
+                        }
+                    }
                 }
             }
-            else  // if(currentDataType_ == DataType::SensorData)
+
+        free(message_buf);
+        fclose(fd);
+
+        } else {
+            std::ifstream inputFile(osiFileName_.toStdString().c_str());
+            inputFile.seekg(newIterStamp_->second, std::ios_base::beg);
+            int size_found = 0;
+
+            std::string str_line_input;
+            std::string str_line;
+            std::string str_backup;
+
+            while (getline(inputFile, str_line_input))
             {
-                osi3::SensorData sd;
-                if (sd.ParseFromString(str_line))
+                if (!str_backup.empty())
                 {
-                    uint64_t curStamp = ::GetTimeStampInNanoSecond<osi3::SensorData>(sd);
-                    emit MessageSDSendout(sd);
-                    SendOutMessage(str_line);
-                    // update slider value in millisecond level
-                    int sliderValue = (curStamp - firstTimeStamp_) / 1000000;
-                    emit UpdateSliderValue(sliderValue);
-                    break;
+                    str_line = str_backup;
+                    str_backup = "";
+                }
+                if ((size_found = str_line_input.find("$$__$$")) != std::string::npos)
+                {
+                    str_line += str_line_input.substr(0, size_found);
+                    str_backup = str_line_input.substr(size_found + 6) + "\n";
+                }
+                else
+                {
+                    str_line += str_line_input + "\n";
+                    continue;
+                }
+
+                if (currentDataType_ == DataType::SensorView)
+                {
+                    osi3::SensorView sv;
+                    if (sv.ParseFromString(str_line))
+                    {
+                        uint64_t curStamp = ::GetTimeStampInNanoSecond<osi3::SensorView>(sv);
+                        emit MessageSVSendout(sv);
+                        SendOutMessage(str_line);
+                        // update slider value in millisecond level
+                        uint64_t sliderValue = (curStamp - firstTimeStamp_) / 1000000;
+                        emit UpdateSliderValue(sliderValue);
+                        break;
+                    }
+                }
+                else  // if(currentDataType_ == DataType::SensorData)
+                {
+                    osi3::SensorData sd;
+                    if (sd.ParseFromString(str_line))
+                    {
+                        uint64_t curStamp = ::GetTimeStampInNanoSecond<osi3::SensorData>(sd);
+                        emit MessageSDSendout(sd);
+                        SendOutMessage(str_line);
+                        // update slider value in millisecond level
+                        uint64_t sliderValue = (curStamp - firstTimeStamp_) / 1000000;
+                        emit UpdateSliderValue(sliderValue);
+                        break;
+                    }
                 }
             }
+
+            inputFile.close();
         }
-
-        inputFile.close();
     }
 }
 
@@ -207,56 +318,117 @@ void OsiReader::ReadHeader()
     {
         uint64_t timeStamp = std::strtoull(line.c_str(), &pEnd, 10);
         std::streamoff offset = std::strtol(pEnd, &pEnd, 10);
-        stamp2Offset_.push_back(std::make_pair(timeStamp, offset));
+        stamp2Offset_.emplace_back(timeStamp, offset);
     }
-
     inputHeader.close();
 }
+
 
 bool OsiReader::CreateHeader(QString& errorMsg)
 {
     bool success(true);
-
-    std::ifstream inputFile(osiFileName_.toStdString().c_str(), std::ios::binary);
-
-    std::string str_line_input;
-    std::string str_line;
-    std::string str_backup = "";
-    size_t size_found;
-
-    std::streampos beginPos = inputFile.tellg();
-    std::streamoff offset(0);
     bool isFirstMsg(true);
     double firstTimeStamp(0);
 
-    while (getline(inputFile, str_line_input) && success)
-    {
-        if (str_backup != "")
-        {
-            str_line = str_backup;
-            str_backup = "";
+    const std::regex osi_regex("\\.osi");
+
+    if (std::regex_search(osiFileName_.toStdString().c_str(), osi_regex)){
+        FILE *fd = fopen(osiFileName_.toStdString().c_str(), "r");
+        if (fd == nullptr) {
+            perror("Open failed");
+            return -1;
         }
-        if ((size_found = str_line_input.find("$$__$$")) != std::string::npos)
-        {
-            str_line += str_line_input.substr(0, size_found);
-            str_backup = str_line_input.substr(size_found + 6) + "\n";
-        }
-        else
-        {
-            str_line += str_line_input + "\n";
-            continue;
+        std::streamoff offset(0);
+        std::streampos beginPos = ftell (fd);
+
+        typedef unsigned int message_size_t;
+
+        int is_ok = 1;
+        char *message_buf = nullptr;
+        size_t buf_size = 0;
+
+        while (is_ok && success) {
+            message_size_t size = 0;
+            int ret = fread(&size, sizeof(message_size_t), 1, fd);
+            if (ret == 0) {
+                std::cout << "End of trace" << std::endl;
+                break;
+            }
+            else if (ret != 1) {
+                std::cout << "Failed to read the size of the message" << std::endl;
+                is_ok = 0;
+            }
+            if (is_ok && size > buf_size) {
+                size_t new_size = size*2;
+                if (realloc_buffer(&message_buf, new_size) < 0) {
+                    is_ok = 0;
+                    std::cout << "Failed to allocate memory" << std::endl;
+                } else {
+                    buf_size = new_size;
+                }
+            }
+            if (is_ok) {
+                ret = read_bytes(message_buf, size, fd);
+                if (ret < 0) {
+                    is_ok = 0;
+                    std::cout << "Failed to read the message" << std::endl;
+                }
+            }
+            if (is_ok) {
+                std::string message_str(message_buf, message_buf+size);
+
+                if (currentDataType_ == DataType::SensorView)
+                    success = BuildUpStamps<osi3::SensorView>(isFirstMsg, firstTimeStamp, message_str, offset);
+                else  // if(currentDataType_ == DataType::SensorData)
+                    success = BuildUpStamps<osi3::SensorData>(isFirstMsg, firstTimeStamp, message_str, offset);
+
+                offset = ftell (fd) - beginPos - size - sizeof(message_size_t);
+            }
         }
 
-        if (currentDataType_ == DataType::SensorView)
-            success = BuildUpStamps<osi3::SensorView>(isFirstMsg, firstTimeStamp, str_line, offset);
-        else  // if(currentDataType_ == DataType::SensorData)
-            success = BuildUpStamps<osi3::SensorData>(isFirstMsg, firstTimeStamp, str_line, offset);
+    free(message_buf);
+    fclose(fd);
+    } else {
+        std::ifstream inputFile(osiFileName_.toStdString().c_str(), std::ios::binary);
 
-        offset = inputFile.tellg() - beginPos - str_backup.size();
-        str_line = "";
+        std::string str_line_input;
+        std::string str_line;
+        std::string str_backup;
+        size_t size_found;
+
+        std::streampos beginPos = inputFile.tellg();
+        std::streamoff offset(0);
+
+
+        while (getline(inputFile, str_line_input) && success)
+        {
+            if (!str_backup.empty())
+            {
+                str_line = str_backup;
+                str_backup = "";
+            }
+            if ((size_found = str_line_input.find("$$__$$")) != std::string::npos)
+            {
+                str_line += str_line_input.substr(0, size_found);
+                str_backup = str_line_input.substr(size_found + 6) + "\n";
+            }
+            else
+            {
+                str_line += str_line_input + "\n";
+                continue;
+            }
+
+            if (currentDataType_ == DataType::SensorView)
+                success = BuildUpStamps<osi3::SensorView>(isFirstMsg, firstTimeStamp, str_line, offset);
+            else  // if(currentDataType_ == DataType::SensorData)
+                success = BuildUpStamps<osi3::SensorData>(isFirstMsg, firstTimeStamp, str_line, offset);
+
+            offset = inputFile.tellg() - beginPos - str_backup.size();
+            str_line = "";
+        }
     }
 
-    if (stamp2Offset_.empty() || success == false)
+    if (stamp2Offset_.empty() || !success)
     {
         success = false;
         errorMsg = "Can not parse OSI::SensorData message!\n Wrong file format!\n";
@@ -266,7 +438,6 @@ bool OsiReader::CreateHeader(QString& errorMsg)
         SaveHeader();
     }
 
-    inputFile.close();
 
     return success;
 }
@@ -289,7 +460,7 @@ bool OsiReader::BuildUpStamps(bool& isFirstMsg,
         }
 
         uint64_t timeStamp = GetTimeStampInNanoSecond<T>(data);
-        stamp2Offset_.push_back(std::make_pair(timeStamp - (uint64_t)firstTimeStamp, offset));
+        stamp2Offset_.emplace_back(timeStamp - (uint64_t)firstTimeStamp, offset);
     }
     else
     {
@@ -315,95 +486,199 @@ void OsiReader::SaveHeader()
 
 void OsiReader::SendMessageLoop()
 {
-    std::ifstream inputFile(osiFileName_.toStdString().c_str(), std::ios::binary);
     bool isFirstMessage(true);
+    std::regex osi_regex("\\.osi");
 
-    while (isRunning_)
-    {
-        if (!isPaused_)
-        {
-            inputFile.clear();
-            inputFile.seekg(iterStamp_->second, std::ios_base::beg);
-
-            std::string str_line_input;
-            std::string str_line;
-            std::string str_backup = "";
-            size_t size_found;
-
-            uint64_t preTimeStamp(0);
-            bool isRefreshMessage(true);
-
-            while (getline(inputFile, str_line_input) && !isPaused_ && isRunning_)
-            {
-                if (iterChanged_)
-                    break;
-
-                if (str_backup != "")
-                {
-                    str_line = str_backup;
-                    str_backup = "";
-                }
-                if ((size_found = str_line_input.find("$$__$$")) != std::string::npos)
-                {
-                    str_line += str_line_input.substr(0, size_found);
-                    str_backup = str_line_input.substr(size_found + 6) + "\n";
-                }
-                else
-                {
-                    str_line += str_line_input + "\n";
-                    continue;
-                }
-
-                bool sendSuccess(true);
-                if (currentDataType_ == DataType::SensorView)
-                {
-                    osi3::SensorView sv;
-                    sendSuccess =
-                        SendMessage<osi3::SensorView>(sv, isFirstMessage, isRefreshMessage, preTimeStamp, str_line);
-                    if (sendSuccess)
-                        MessageSVSendout(sv);
-                }
-                else  // if(currentDataType_ == DataType::SensorData)
-                {
-                    osi3::SensorData sd;
-                    sendSuccess =
-                        SendMessage<osi3::SensorData>(sd, isFirstMessage, isRefreshMessage, preTimeStamp, str_line);
-                    if (sendSuccess)
-                        MessageSDSendout(sd);
-                }
-
-                if (!sendSuccess)
-                {
-                    // should never come here: error - osi parse wrong
-                    isRunning_ = false;
-                    isConnected_ = false;
-                    emit Disconnected(
-                        tr("Run time error: Can not parse OSI::SensorData message!\n Wrong file format!\n"));
-                    break;
-                }
-
-                str_line = "";
-            }
-
-            str_backup = "";
-            str_line = "";
-
-            if (iterChanged_)
-            {
-                iterStamp_ = newIterStamp_;
-                iterMutex_.lock();
-                iterChanged_ = false;
-                iterMutex_.unlock();
-            }
+    if (std::regex_search(osiFileName_.toStdString().c_str(), osi_regex)){
+        FILE *fd = fopen(osiFileName_.toStdString().c_str(), "r");
+        if (fd == nullptr) {
+            perror("Open failed");
         }
-        else
+
+        while (isRunning_)
         {
-            QThread::msleep(5);
+            if (!isPaused_) {
+                    fseek(fd, iterStamp_->second, SEEK_SET);
+                    uint64_t preTimeStamp(0);
+                    bool isRefreshMessage(true);
+                    typedef unsigned int message_size_t;
+
+                    std::string str_backup;
+
+                    int is_ok = 1;
+                    char *message_buf = nullptr;
+                    size_t buf_size = 0;
+
+                    while (is_ok && !isPaused_ && isRunning_) {
+
+                        if (iterChanged_)
+                            break;
+
+                        message_size_t size = 0;
+                        int ret = fread(&size, sizeof(message_size_t), 1, fd);
+                        if (ret == 0) {
+                            std::cout << "End of trace" << std::endl;
+                            break;
+                        } else if (ret != 1) {
+                            std::cout << "Failed to read the size of the message" << std::endl;
+                            is_ok = 0;
+                        }
+                        if (is_ok && size > buf_size) {
+                            size_t new_size = size * 2;
+                            if (realloc_buffer(&message_buf, new_size) < 0) {
+                                is_ok = 0;
+                                std::cout << "Failed to allocate memory" << std::endl;
+                            } else {
+                                buf_size = new_size;
+                            }
+                        }
+                        if (is_ok) {
+                            ret = read_bytes(message_buf, size, fd);
+                            if (ret < 0) {
+                                is_ok = 0;
+                                std::cout << "Failed to read the message" << std::endl;
+                            }
+                        }
+                        if (is_ok) {
+                            std::string message_str(message_buf, message_buf + size);
+
+                            if (!str_backup.empty())
+                            {
+                                message_str = str_backup;
+                                str_backup = "";
+                            }
+
+                            bool sendSuccess(true);
+                            if (currentDataType_ == DataType::SensorView) {
+                                osi3::SensorView sv;
+                                sendSuccess = SendMessage<osi3::SensorView>(sv, isFirstMessage, isRefreshMessage,
+                                                                            preTimeStamp, message_str);
+                                if (sendSuccess)
+                                    MessageSVSendout(sv);
+                            } else  // if(currentDataType_ == DataType::SensorData)
+                            {
+                                osi3::SensorData sd;
+                                sendSuccess = SendMessage<osi3::SensorData>(sd, isFirstMessage, isRefreshMessage,
+                                                                            preTimeStamp, message_str);
+                                if (sendSuccess)
+                                    MessageSDSendout(sd);
+                            }
+
+                            if (!sendSuccess) {
+                                // should never come here: error - osi parse wrong
+                                isRunning_ = false;
+                                isConnected_ = false;
+                                emit Disconnected(
+                                        tr("Run time error: Can not parse OSI::SensorData message!\n Wrong file format!\n"));
+                                break;
+                            }
+                        }
+
+                    }
+                    free(message_buf);
+
+                    if (iterChanged_) {
+                        iterStamp_ = newIterStamp_;
+                        iterMutex_.lock();
+                        iterChanged_ = false;
+                        iterMutex_.unlock();
+                    }
+                } else {
+                    QThread::msleep(5);
+                }
         }
+        fclose(fd);
     }
+    else {
+        std::cout << "[WARNING]: The $$__$$ separated trace files will be completely removed in the near future and be replaced with the length separated OSI trace files. Please convert them to *.osi files with the converter in the main OSI repository or record the current trace file into the OSI format." << std::endl;
+        std::ifstream inputFile(osiFileName_.toStdString().c_str(), std::ios::binary);
+        while (isRunning_)
+        {
+            if (!isPaused_)
+            {
+                inputFile.clear();
+                inputFile.seekg(iterStamp_->second, std::ios_base::beg);
+
+                std::string str_line_input;
+                std::string str_line;
+                std::string str_backup;
+                size_t size_found;
+
+                uint64_t preTimeStamp(0);
+                bool isRefreshMessage(true);
+
+                while (getline(inputFile, str_line_input) && !isPaused_ && isRunning_)
+                {
+                    if (iterChanged_)
+                        break;
+
+                    if (!str_backup.empty())
+                    {
+                        str_line = str_backup;
+                        str_backup = "";
+                    }
+                    if ((size_found = str_line_input.find("$$__$$")) != std::string::npos)
+                    {
+                        str_line += str_line_input.substr(0, size_found);
+                        str_backup = str_line_input.substr(size_found + 6) + "\n";
+                    }
+                    else
+                    {
+                        str_line += str_line_input + "\n";
+                        continue;
+                    }
+
+                    bool sendSuccess(true);
+                    if (currentDataType_ == DataType::SensorView)
+                    {
+                        osi3::SensorView sv;
+                        sendSuccess =
+                            SendMessage<osi3::SensorView>(sv, isFirstMessage, isRefreshMessage, preTimeStamp, str_line);
+                        if (sendSuccess)
+                            MessageSVSendout(sv);
+                    }
+                    else  // if(currentDataType_ == DataType::SensorData)
+                    {
+                        osi3::SensorData sd;
+                        sendSuccess =
+                            SendMessage<osi3::SensorData>(sd, isFirstMessage, isRefreshMessage, preTimeStamp, str_line);
+                        if (sendSuccess)
+                            MessageSDSendout(sd);
+                    }
+
+                    if (!sendSuccess)
+                    {
+                        // should never come here: error - osi parse wrong
+                        isRunning_ = false;
+                        isConnected_ = false;
+                        emit Disconnected(
+                            tr("Run time error: Can not parse OSI::SensorData message!\n Wrong file format!\n"));
+                        break;
+                    }
+
+                    str_line = "";
+                }
+
+                str_backup = "";
+                str_line = "";
+
+                if (iterChanged_)
+                {
+                    iterStamp_ = newIterStamp_;
+                    iterMutex_.lock();
+                    iterChanged_ = false;
+                    iterMutex_.unlock();
+                }
+            }
+            else
+            {
+                QThread::msleep(5);
+            }
+        }
 
     inputFile.close();
-
+    
+    }
     isReadTerminated_ = true;
 }
 
@@ -444,7 +719,7 @@ bool OsiReader::SendMessage(T& data,
 
         SendOutMessage(message);
         // update slider value in millisecond level
-        int sliderValue = (curStamp - firstTimeStamp_) / 1000000;
+        uint64_t sliderValue = (curStamp - firstTimeStamp_) / 1000000;
         emit UpdateSliderValue(sliderValue);
 
         ++iterStamp_;

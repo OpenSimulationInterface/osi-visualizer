@@ -5,7 +5,7 @@ OSI Visualizer serves as a visualization tool for the current implementation of 
 
 ## Usage
 
-Use the configuration panel at the right (see Screenshot below) to load e.g. a playback file for channel 1 at `Playback` and choose a port to which it will be send (here 5564). Select the data type `SensorView` according to the content of the file. After that enter into the IP field the `localhost` and into the port field the receiving port (here 5563) for channel 2 in the panel below at `Connection`. Select the data type it is expected to visualize (here `SensorData`). In this example an intermediary on localhost processes the data from the input file using a [OSMP](https://github.com/OpenSimulationInterface/osi-sensor-model-packaging) sensor model, transforms it into `SensorData` and sends it to port 5563.
+Use the configuration panel at the right (see Screenshot below) to load e.g. a [OSI trace file](https://opensimulationinterface.github.io/osi-documentation/open-simulation-interface/doc/fileformat.html) for channel 1 at `Playback` and choose a port to which it will be send (here 5564). Select the data type `SensorView` according to the content of the file. After that enter into the IP field the `localhost` and into the port field the receiving port (here 5563) for channel 2 in the panel below at `Connection`. Select the data type it is expected to visualize (here `SensorData`). In this example an intermediary on localhost processes the data from the input file using a [OSMP](https://github.com/OpenSimulationInterface/osi-sensor-model-packaging) sensor model, transforms it into `SensorData` and sends it to port 5563.
 
 ![](resources/Images/Over_View.png)
 

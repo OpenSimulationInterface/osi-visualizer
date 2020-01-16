@@ -2,6 +2,7 @@
 os:
     - bionic
     - windows
+    - osx
 
 # Use C++ build environment.
 language: cpp
@@ -34,10 +35,9 @@ install:
 # Change directory back to default build directory.
 before_script:
     - cd "${TRAVIS_BUILD_DIR}"
+    - bash install-deps.sh
+    - bash build-install-build-deps.sh
 
 # Run the build script
 script:
-    - mkdir -p build
-    - cd build
-    - cmake ..
-    - cmake --build .    
+    - bash build.sh   

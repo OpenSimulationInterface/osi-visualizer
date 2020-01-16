@@ -65,7 +65,7 @@ class AppConfig
 
   private:
     QString configFileName_;
-    QString config_file_path_{"/tmp/lime/osi_visualizer"};
+    QString config_file_path_{"."};
 };
 
 #endif  // OSI_VISUALIZER_APP_CONFIG_H

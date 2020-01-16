@@ -1,15 +1,43 @@
+# Define OS
+os:
+    - bionic
+    - windows
+
 # Use C++ build environment.
 language: cpp
 
-sudo: required
+# Protobuf requires g++ (see https://github.com/google/protobuf/blob/master/src/README.md)
+compiler:
+    - gcc
 
-# We use docker-based builds to enable current Ubuntu LTS BuildEnv
-services:
-    - docker
-
+# Handle dependencies in separate directory.
 before_install:
-    - docker build -t osi-standard/osi-visualizer .
+    - DEPS_DIR="${HOME}/deps"
+    - mkdir -p "${DEPS_DIR}"
+    - cd "${DEPS_DIR}"
 
-# Run the build script.
+# Install necessary packages.
+install:
+    # Install a recent version of CMake
+    - |
+        CMAKE_URL="https://cmake.org/files/v3.7/cmake-3.7.2-Linux-x86_64.tar.gz"
+        if [ ! -f ${DEPS_DIR}/cmake/bin/cmake ] ; then mkdir -p cmake ; travis_retry wget --no-check-certificate --quiet -O - ${CMAKE_URL} | tar --strip-components=1 -xz -C cmake ; fi
+        export PATH=${DEPS_DIR}/cmake/bin:${PATH}
+
+    # Install a recent version of the Protobuf
+    - |
+        PROTOBUF_URL="https://github.com/google/protobuf/releases/download/v3.2.0/protobuf-cpp-3.2.0.tar.gz"
+        if [ ! -f ${DEPS_DIR}/protobuf/install/bin/protoc ] ; then mkdir -p protobuf ; travis_retry wget --no-check-certificate --quiet -O - ${PROTOBUF_URL} | tar --strip-components=1 -xz -C protobuf ; cd protobuf ; ./configure --prefix=${DEPS_DIR}/protobuf/install ; make ; make install ; fi
+        export PATH=${DEPS_DIR}/protobuf/install/bin:${PATH}
+        
+
+# Change directory back to default build directory.
+before_script:
+    - cd "${TRAVIS_BUILD_DIR}"
+
+# Run the build script
 script:
-    - docker run -it -v $(pwd):/project osi-standard/osi-visualizer /bin/sh -c "mkdir -p build && cd build && cmake .. && cmake --build ."
+    - mkdir -p build
+    - cd build
+    - cmake ..
+    - cmake --build .    

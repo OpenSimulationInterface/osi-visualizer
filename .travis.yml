@@ -1,8 +1,5 @@
-# Define OS
-os:
-    - bionic
-    - windows
-    - osx
+# Define Distribution
+dist: bionic
 
 # Use C++ build environment.
 language: cpp

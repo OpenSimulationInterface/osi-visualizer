@@ -34,8 +34,8 @@ install:
 # Change directory back to default build directory.
 before_script:
     - cd "${TRAVIS_BUILD_DIR}"
-    - bash install-deps.sh
-    - bash build-install-build-deps.sh
+    - sudo bash install-deps.sh
+    - sudo bash build-install-build-deps.sh
 
 # Run the build script
 script:

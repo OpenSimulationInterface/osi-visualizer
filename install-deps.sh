@@ -42,4 +42,4 @@ echo "
 # Installing OpenGL                                                                   
 #################################
 "
-apt-get install libgl1-mesa-dev libgl1-mesa-dri libgl1-mesa-glx -y
+apt-get install libgl1-mesa-dev libgl1-mesa-dri libgl1-mesa-glx libqt5opengl5-dev -y

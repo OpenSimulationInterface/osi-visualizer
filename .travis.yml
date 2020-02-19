@@ -1,15 +1,36 @@
+# Define Distribution
+dist: bionic
+
 # Use C++ build environment.
 language: cpp
 
 sudo: required
 
-# We use docker-based builds to enable current Ubuntu LTS BuildEnv
-services:
-    - docker
+# Protobuf requires g++ (see https://github.com/google/protobuf/blob/master/src/README.md)
+compiler:
+    - gcc
 
+# Handle dependencies in separate directory.
 before_install:
-    - docker build -t osi-standard/osi-visualizer .
+    - DEPS_DIR="${HOME}/deps"
+    - mkdir -p "${DEPS_DIR}"
+    - cd "${DEPS_DIR}"
 
-# Run the build script.
+# Install necessary packages.
+install:
+    # Install a recent version of CMake
+    - |
+        CMAKE_URL="https://cmake.org/files/v3.7/cmake-3.7.2-Linux-x86_64.tar.gz"
+        if [ ! -f ${DEPS_DIR}/cmake/bin/cmake ] ; then mkdir -p cmake ; travis_retry wget --no-check-certificate --quiet -O - ${CMAKE_URL} | tar --strip-components=1 -xz -C cmake ; fi
+        export PATH=${DEPS_DIR}/cmake/bin:${PATH}
+
+# Change directory back to default build directory.
+before_script:
+    - cd "${TRAVIS_BUILD_DIR}"
+    - sudo apt-get update && sudo apt-get upgrade && sudo apt-get autoremove
+    - sudo bash install-deps.sh
+    - sudo bash build-install-build-deps.sh
+
+# Run the build script
 script:
-    - docker run -it -v $(pwd):/project osi-standard/osi-visualizer /bin/sh -c "mkdir -p build && cd build && cmake .. && cmake --build ."
+    - bash build.sh   

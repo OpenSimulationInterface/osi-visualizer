@@ -172,7 +172,7 @@ void OsiReader::SliderValueChanged(int newValue)
         if (std::regex_search(osiFileName_.toStdString().c_str(), osi_regex)){
 
             typedef unsigned int message_size_t;
-            FILE *fd = fopen(osiFileName_.toStdString().c_str(), "r");
+            FILE *fd = fopen(osiFileName_.toStdString().c_str(), "rb");
             if (fd == nullptr) {
                 perror("Open failed");
             }
@@ -333,7 +333,7 @@ bool OsiReader::CreateHeader(QString& errorMsg)
     const std::regex osi_regex("\\.osi");
 
     if (std::regex_search(osiFileName_.toStdString().c_str(), osi_regex)){
-        FILE *fd = fopen(osiFileName_.toStdString().c_str(), "r");
+        FILE *fd = fopen(osiFileName_.toStdString().c_str(), "rb");
         if (fd == nullptr) {
             perror("Open failed");
             return -1;
@@ -490,7 +490,7 @@ void OsiReader::SendMessageLoop()
     std::regex osi_regex("\\.osi");
 
     if (std::regex_search(osiFileName_.toStdString().c_str(), osi_regex)){
-        FILE *fd = fopen(osiFileName_.toStdString().c_str(), "r");
+        FILE *fd = fopen(osiFileName_.toStdString().c_str(), "rb");
         if (fd == nullptr) {
             perror("Open failed");
         }

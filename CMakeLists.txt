@@ -8,6 +8,7 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
+set(CMAKE_AUTORCC ON)
 
 find_package(Qt5 COMPONENTS Core Gui OpenGL Widgets Xml Network REQUIRED)
 
@@ -42,11 +43,11 @@ set(SOURCES
     src/appconfig.cpp
     src/glpoint.cpp
     src/gltrafficsign.cpp
-    src/qrc_resources.cpp
     src/osiparser.cpp
     src/glfieldofview.cpp
     src/fmureceiver.cpp
     src/utils.cpp
+    resources.qrc
 )
 
 set(HEADERS

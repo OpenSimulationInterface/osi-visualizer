@@ -1,7 +1,0 @@
-<!DOCTYPE RCC><RCC version="1.0">
-<qresource>
-    <file>resources/Shaders/FragmentShader.frag</file>
-    <file>resources/Shaders/VertexShader.vert</file>
-    <file>resources/Images/Grid.png</file>
-</qresource>
-</RCC>

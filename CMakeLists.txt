@@ -8,7 +8,7 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
-set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTORCC OFF)
 
 find_package(Qt5 COMPONENTS Core Gui OpenGL Widgets Xml Network REQUIRED)
 
@@ -23,6 +23,24 @@ find_library(
   fmilib_shared
   HINTS /usr/lib/fmi-library /usr/lib /usr/local/lib/fmi-library /usr/local/lib
 )
+
+# Unfortunately CMAKE_AUTORCC does not automatically rebuild the qrc file if one
+# of the contained files changes. Set up rcc manually to ensure correct builds
+# even if e.g. the shaders change.
+set(RCC_OUTPUT_FILE ${CMAKE_CURRENT_BINARY_DIR}/rcc_resources.cpp)
+add_custom_command(OUTPUT ${RCC_OUTPUT_FILE}
+    COMMAND ${Qt5Core_RCC_EXECUTABLE}
+    ARGS -o ${RCC_OUTPUT_FILE}
+         resources.qrc
+    WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/resources
+    MAIN_DEPENDENCY resources/resources.qrc
+    DEPENDS resources/Shaders/FragmentShader.frag
+            resources/Shaders/VertexShader.vert
+            resources/Images/Grid.png
+    VERBATIM)
+set_property(SOURCE ${RCC_OUTPUT_FILE} PROPERTY SKIP_AUTOMOC ON)
+set_property(SOURCE ${RCC_OUTPUT_FILE} PROPERTY SKIP_AUTOUIC ON)
+set_property(SOURCE ${RCC_OUTPUT_FILE} PROPERTY SKIP_AUTOGEN ON)
 
 set(SOURCES
     src/main.cpp
@@ -47,7 +65,7 @@ set(SOURCES
     src/glfieldofview.cpp
     src/fmureceiver.cpp
     src/utils.cpp
-    resources.qrc
+    ${CMAKE_CURRENT_BINARY_DIR}/rcc_resources.cpp
 )
 
 set(HEADERS

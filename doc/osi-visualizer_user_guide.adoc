@@ -1,0 +1,53 @@
+= OSI Visualizer
+:revnumber: v.v.v 
+:revdate: dd.mm.yyyy
+:toc: left 
+:toclevels: 2
+:sectnums:
+
+:topicdir: topics
+:reusedir: reuse
+
+// header & footer for html
+// html themes
+//
+// source highlighting
+:source-highlighter: rouge
+:rouge-style: base16.solarized.light
+// 
+// :nofooter:
+:last-update-label!:
+//embed images into html
+:data-uri: 
+:mathematical-format: svg
+:imagesoutdir: ../images/generated_images
+
+include::./misc/idea_visualizer.adoc[leveloffset=+1]
+
+== Setting up OSI Visualizer
+
+include::./setup/installing_dependencies.adoc[leveloffset=+2]
+
+include::./setup/building_visualizer.adoc[leveloffset=+2]
+
+include::./setup/building_docker.adoc[leveloffset=+2]
+
+== Using OSI Visualizer
+
+include::./use/running_visualizer.adoc[leveloffset=+2]
+
+include::./use/running_visualizer_docker.adoc[leveloffset=+2]
+
+include::./use/receiving_network.adoc[leveloffset=+2]
+
+include::./use/playing_messages.adoc[leveloffset=+2]
+
+include::./use/showing_field_of_view.adoc[leveloffset=+2]
+
+include::./use/saving_messages.adoc[leveloffset=+2]
+
+include::./use/comparing_messages.adoc[leveloffset=+2]
+
+include::./use/configuring_view.adoc[leveloffset=+2]
+
+include::./use/playing_large_files.adoc[leveloffset=+2]

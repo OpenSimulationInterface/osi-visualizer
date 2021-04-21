@@ -44,10 +44,12 @@ jobs:
 
     # run setup scripts
     - name: Setup build
+      shell: bash
       run: |
           sudo bash ./install-deps.sh
           sudo bash ./build-install-build-deps.sh
 
     # run build script
     - name: build visualizer
-      run: ./build.sh   
+      shell: bash
+      run: sudo bash ./build.sh   

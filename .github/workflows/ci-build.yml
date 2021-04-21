@@ -45,8 +45,8 @@ jobs:
     # run setup scripts
     - name: Setup build
       run: |
-          sudo ./install-deps.sh
-          sudo ./build-install-build-deps.sh
+          sudo bash ./install-deps.sh
+          sudo bash ./build-install-build-deps.sh
 
     # run build script
     - name: build visualizer

@@ -1,0 +1,53 @@
+name: OSI Visualizer build pipeline
+
+on:
+  push:
+  pull_request:
+    branches: [ master ]
+
+# this is a test
+
+jobs:
+  build-osi-visualizer:
+    name: Build OSI Visualizer
+
+    runs-on: ubuntu-18.04
+
+    steps:
+    - name: Checkout OSI
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+
+    # cache dependencies
+    - name: Cache Dependencies
+      id: cache-depends
+      uses: actions/cache@v2
+      with:
+        path: protobuf-3.11.3
+        key: ${{ runner.os }}-v1-depends
+
+
+    # Download and build protobuf
+    - name: Download ProtoBuf
+      if: steps.cache-depends.outputs.cache-hit != 'true'
+      run: curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v3.11.3/protobuf-all-3.11.3.tar.gz && tar xzvf protobuf-all-3.11.3.tar.gz
+
+    - name: Build ProtoBuf
+      if: steps.cache-depends.outputs.cache-hit != 'true'
+      working-directory: protobuf-3.11.3
+      run: ./configure DIST_LANG=cpp --prefix=/usr && make
+
+    - name: Install ProtoBuf
+      working-directory: protobuf-3.11.3
+      run: sudo make install && sudo ldconfig
+
+    # run setup scripts
+    - name: Setup build
+      run: |
+          ./install-deps.sh
+          ./build-install-build-deps.sh
+
+    # run build script
+    - name: build visualizer
+      run: ./build.sh   

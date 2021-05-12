@@ -1,5 +1,6 @@
 # OSI Visualizer
-[![Travis Build Status](https://travis-ci.com/OpenSimulationInterface/osi-visualizer.svg?branch=master)](https://travis-ci.com/OpenSimulationInterface/osi-visualizer)
+
+[![OSI Visualizer build pipeline](https://github.com/OpenSimulationInterface/osi-visualizer/actions/workflows/ci-build.yml/badge.svg)](https://github.com/OpenSimulationInterface/osi-visualizer/actions/workflows/ci-build.yml)
 
 OSI Visualizer serves as a visualization tool for the current implementation of [OSI (Open Simulation Interface)](https://github.com/OpenSimulationInterface/open-simulation-interface) messages. It supports `GroundTruth`, `SensorView` and `SensorData` messages and allows the visualization of two independent data channels using different input types (file and network stream). For more information see the documentation [here](https://opensimulationinterface.github.io/osi-documentation/osi-visualizer/README.html).
 

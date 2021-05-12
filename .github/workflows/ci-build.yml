@@ -11,7 +11,7 @@ jobs:
   build-osi-visualizer:
     name: Build OSI Visualizer
 
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
 
     steps:
     - name: Checkout OSI

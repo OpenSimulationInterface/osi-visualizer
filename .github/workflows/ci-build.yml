@@ -1,0 +1,32 @@
+name: OSI Visualizer build pipeline
+
+on:
+  push:
+  pull_request:
+    branches: [ master ]
+
+# this is a test
+
+jobs:
+  build-osi-visualizer:
+    name: Build OSI Visualizer
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout OSI
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+
+    # run setup scripts
+    - name: Setup build
+      shell: bash
+      run: |
+          sudo bash ./install-deps.sh
+          sudo bash ./build-install-build-deps.sh
+
+    # run build script
+    - name: build visualizer
+      shell: bash
+      run: sudo bash ./build.sh   

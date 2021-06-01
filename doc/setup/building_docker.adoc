@@ -1,11 +1,29 @@
-= Building OSI visualizer Docker file
+= Building OSI visualizer Docker image
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-Et malesuada fames ac turpis egestas.
-Mauris pharetra et ultrices neque ornare aenean euismod elementum nisi.
-Nulla facilisi morbi tempus iaculis urna id. Justo eget magna fermentum iaculis.
-Sed augue lacus viverra vitae congue eu.
-Velit ut tortor pretium viverra suspendisse.
-Amet commodo nulla facilisi nullam vehicula ipsum a.
-Nibh nisl condimentum id venenatis a.
-Diam vel quam elementum pulvinar etiam non quam lacus suspendisse.
+OSI visualizer provides a Docker file for building a Docker image.
+The Docker image bundles all necessary files and dependencies for OSI visualizer.
+It enables running OSI visualizer on non-Linux plattforms.
+
+**Prerequisites**
+
+* You have installed _Docker_ (version 19.03 or higher)
+* You have installed _nvidia-docker2_
+
+**Steps**
+
+. Open a command line interpreter.
+. Change to the OSI visualizer repository
+. Run the provided script to build the Docker image.
++
+[source]
+----
+sh build-nvidia-docker.sh
+----
+
+**Result**
+
+The Docker image for OSI visualizer is built.
+
+**What to do next**
+
+Run OSI visualizer using Docker

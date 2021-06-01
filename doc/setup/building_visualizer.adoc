@@ -1,11 +1,35 @@
 = Building OSI visualizer
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-Et malesuada fames ac turpis egestas.
-Mauris pharetra et ultrices neque ornare aenean euismod elementum nisi.
-Nulla facilisi morbi tempus iaculis urna id. Justo eget magna fermentum iaculis.
-Sed augue lacus viverra vitae congue eu.
-Velit ut tortor pretium viverra suspendisse.
-Amet commodo nulla facilisi nullam vehicula ipsum a.
-Nibh nisl condimentum id venenatis a.
-Diam vel quam elementum pulvinar etiam non quam lacus suspendisse.
+OSI visualizer provides a script for building OSI visualizer.
+
+**Prerequisites**
+
+* You have cloned the OSI visualizer repository.
+* You have installed the following dependencies.
+  It is recommended to install the dependencies using the provided scripts.
+** _cmake_ (version 3.5 or higher)
+** _Qt_ (version 5.5.0 or higher)
+** _ZeroMQ_ including the  C++ bindings (version 4.2.1 or higher)
+** _Protocol buffers_ (version 2.6.1 or higher)
+** _OpenGL_
+** _FMILibrary_ (version 2.0.2 or higher)
+** _OSI_ (version 3.1.2 or higher)
+
+**Steps**
+
+. Open a command line interpreter.
+. Change to the OSI visualizer repository
+. Run the provided script to build OSI visualizer.
++
+[source]
+----
+bash build.sh
+----
+
+**Result**
+
+OSI visualizer is built.
+
+**What to do next**
+
+Run OSI visualizer.

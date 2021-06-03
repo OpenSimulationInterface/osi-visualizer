@@ -1,11 +1,23 @@
 = Receiving OSI messages from a network
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-Et malesuada fames ac turpis egestas.
-Mauris pharetra et ultrices neque ornare aenean euismod elementum nisi.
-Nulla facilisi morbi tempus iaculis urna id. Justo eget magna fermentum iaculis.
-Sed augue lacus viverra vitae congue eu.
-Velit ut tortor pretium viverra suspendisse.
-Amet commodo nulla facilisi nullam vehicula ipsum a.
-Nibh nisl condimentum id venenatis a.
-Diam vel quam elementum pulvinar etiam non quam lacus suspendisse.
+OSI Visualizer can visualize OSI messages received over a network.
+
+[[image-connection]]
+image::connection.png[title = "Connection section in the configuration panel."]
+
+**Prerequisites**
+
+OSI Visualizer is running.
+
+**Steps**
+
+. In the configuration panel of the channel, select **Connection**.
+. In the **IP** field, enter the IP adress of the network.
+. In the **Port** field, enter the port number you want to receive OSI messages at.
+. From the **ZMQ** drop-down list, select the ZMQ pattern you want to use.
+. If you want to add a FMU, check the **FMU** box and select the appropriate FMU file.
+. From the **Data** drop-down list, select the ZMQ pattern you want to use.
+
+**Result**
+
+The channel is set up for receiving OSI messages over the network.

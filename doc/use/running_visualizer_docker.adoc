@@ -1,11 +1,47 @@
-= Running OSI visualizer using Docker
+= Running OSI Visualizer using Docker
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-Et malesuada fames ac turpis egestas.
-Mauris pharetra et ultrices neque ornare aenean euismod elementum nisi.
-Nulla facilisi morbi tempus iaculis urna id. Justo eget magna fermentum iaculis.
-Sed augue lacus viverra vitae congue eu.
-Velit ut tortor pretium viverra suspendisse.
-Amet commodo nulla facilisi nullam vehicula ipsum a.
-Nibh nisl condimentum id venenatis a.
-Diam vel quam elementum pulvinar etiam non quam lacus suspendisse.
+Using Docker enables running OSI Visualizer on non-Linux plattforms.
+
+**Prerequisites**
+
+You have built OSI Visualizer Docker image.
+
+**Steps**
+
+. Open a command line interpreter.
+. Change to the OSI Visualizer repository.
+. Run the following command to start OSI Visualizer.
++
+[source]
+----
+sh run-nvidia-docker.sh
+----
++
+. Place Protobuffer files in `osi_pb/` to make them available to OSI Visualizer.
+  This directory is mounted as a volume to the Docker image.
+
+**Results**
+
+OSI Visualizer is running.
+The Protobuffer files are available to OSI Visualizer
+
+**Troubleshooting**
+
+Currently OSI Visualizer is set up and tested to work with the playback option.
+For using other functionalities, for example socket communication, you may need to change the Docker file.
+After running the image, the following error may appear:
+
+[source]
+----
+Creating network “osi-visualizer_default” with the default driver
+No protocol specified QXcbConnection: Could not connect to display:1
+----
+
+If this error message appears, add the following command to the end of the Docker file and run the image again:
+
+[source]
+----
+sudo xhost +
+----
+
+You do not have to build the Docker image again.

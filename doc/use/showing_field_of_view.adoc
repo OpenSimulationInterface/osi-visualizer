@@ -1,11 +1,22 @@
 = Showing the field of view of a sensor
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-Et malesuada fames ac turpis egestas.
-Mauris pharetra et ultrices neque ornare aenean euismod elementum nisi.
-Nulla facilisi morbi tempus iaculis urna id. Justo eget magna fermentum iaculis.
-Sed augue lacus viverra vitae congue eu.
-Velit ut tortor pretium viverra suspendisse.
-Amet commodo nulla facilisi nullam vehicula ipsum a.
-Nibh nisl condimentum id venenatis a.
-Diam vel quam elementum pulvinar etiam non quam lacus suspendisse.
+OSI Visualizer can visualize the field of view of sensors.
+
+[[image-field_of_view]]
+image::field_of_view.png[title = "Save OSI message button."]
+
+**Prerequisites**
+
+* OSI Visualizer is running.
+
+**Steps**
+
+. In the configuration panel, select **Show Field of View**.
+. In the **MinR** field, enter the minimum range in meter.
+. In the **MaxR** field, enter the maximum range in meter.
+. In the **AP** field, enter the azimuth positive angle in degree.
+. In the **AN** field, enter the azimuth negative angle in degree.
+
+**Result**
+
+The field of view is displayed on the grid.

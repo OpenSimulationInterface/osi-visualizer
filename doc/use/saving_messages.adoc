@@ -1,11 +1,21 @@
 = Saving OSI messages
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-Et malesuada fames ac turpis egestas.
-Mauris pharetra et ultrices neque ornare aenean euismod elementum nisi.
-Nulla facilisi morbi tempus iaculis urna id. Justo eget magna fermentum iaculis.
-Sed augue lacus viverra vitae congue eu.
-Velit ut tortor pretium viverra suspendisse.
-Amet commodo nulla facilisi nullam vehicula ipsum a.
-Nibh nisl condimentum id venenatis a.
-Diam vel quam elementum pulvinar etiam non quam lacus suspendisse.
+OSI Visualizer can log an OSI message stream and save it to a file.
+By default, OSI Visualizer saves up to 1.000.000 messages.
+can change this threshold via `osiMsgSaveThreshold_` in `appconfig.cpp`.
+
+[[image-save_osi_message]]
+image::save_osi_message.png[title = "Save OSI message button."]
+
+**Prerequisites**
+
+* OSI Visualizer is running.
+* OSI Visualizer is playing messages.
+
+**Steps**
+
+Click **Save OSI Message**.
+
+**Result**
+
+The channel is set up for playing back OSI trace files.

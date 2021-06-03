@@ -1,11 +1,10 @@
 = The idea of OSI Visualizer
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-Et malesuada fames ac turpis egestas.
-Mauris pharetra et ultrices neque ornare aenean euismod elementum nisi.
-Nulla facilisi morbi tempus iaculis urna id. Justo eget magna fermentum iaculis.
-Sed augue lacus viverra vitae congue eu.
-Velit ut tortor pretium viverra suspendisse.
-Amet commodo nulla facilisi nullam vehicula ipsum a.
-Nibh nisl condimentum id venenatis a.
-Diam vel quam elementum pulvinar etiam non quam lacus suspendisse.
+OSI Visualizer is a visualization tool for OSI messages.
+It provides two independent channels that can use different input sources.
+OSI Visualizer either receives OSI messages via network or reads them from an OSI trace file.
+If OSI Visualizer reads messages from a trace file, it can also publish them to a configured port of `localhost`.
+OSI Visualizer supports `GroundTruth`, `SensorView` and `SensorData` messages.
+
+[[image-osi_visualizer]]
+image::osi_visualizer.png[title = "User interface of OSI Visualizer."]

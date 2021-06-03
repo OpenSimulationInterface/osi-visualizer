@@ -1,0 +1,13 @@
+= Example use of OSI Visualizer
+
+In this example, channel 1 of OSI Visualizer reads a trace file containing `SensorView` messages and publishes these messages at port 5564.
+An intermediary runs at localhost using a OSMP sensor model .
+The intermediary processes `SensorView` messages received at port 5564, transforms them into `SensorData` messages, and sends them to port 5563.
+OSI Visualizer listens at port 5564 for `SensorData` messages and visualizes them in channel 2.
+
+[[image-demo]]
+image::demo.png[title = "Example configuration of OSI Visualizer."]
+
+After clicking **Play** for channel 1 and 2, OSI Visualizer visualizes the communication between the two channels.
+Channel 1 plays the selected OSI input file scenario and sends out the OSI message to port 5564 at the same time.
+Channel 2 visualizes the received OSI messages at localhost at port 5563 showing it on the canvas.

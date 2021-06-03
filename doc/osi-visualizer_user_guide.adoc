@@ -50,3 +50,5 @@ include::./use/saving_messages.adoc[leveloffset=+2]
 include::./use/comparing_messages.adoc[leveloffset=+2]
 
 include::./use/configuring_view.adoc[leveloffset=+2]
+
+include::./misc/example_visualizer.adoc[leveloffset=+2]

@@ -1,11 +1,51 @@
-= Installing dependencies
+= Installing dependencies of OSI visualizer
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-Et malesuada fames ac turpis egestas.
-Mauris pharetra et ultrices neque ornare aenean euismod elementum nisi.
-Nulla facilisi morbi tempus iaculis urna id. Justo eget magna fermentum iaculis.
-Sed augue lacus viverra vitae congue eu.
-Velit ut tortor pretium viverra suspendisse.
-Amet commodo nulla facilisi nullam vehicula ipsum a.
-Nibh nisl condimentum id venenatis a.
-Diam vel quam elementum pulvinar etiam non quam lacus suspendisse.
+OSI visualizer provides scripts for installing all necessary dependencies.
+Running the scripts will install the following dependecies:
+
+* _Git_
+* _cmake_
+* _Qt
+* _ZeroMQ_ including its  C++ bindings
+* _Protocol buffer_
+* _OpenGL_
+* _FMILibrary_
+* _OSI_
+
+
+**Prerequisites**
+
+It is recommended to use OSI Visualizer under _Ubuntu Linux 18.04 LTS_.
+
+**Steps**
+
+. Open a command line interpreter.
+. Change to the OSI visualizer repository.
+. Run the following command to update the list of available packages and upgrade your system.
++
+[source]
+----
+sudo apt-get update && sudo apt-get upgrade && sudo apt-get autoremove
+----
++
+. Run the provided script to install package dependencies.
++
+[source]
+----
+sudo bash install-deps.sh
+----
++
+. Run the provided script to install OSI and FMILibrary build dependencies.
++
+[source]
+----
+sudo bash build-install-build-deps.sh
+----
+
+**Result**
+
+The necessary dependencies are installed.
+
+**What to do next**
+
+Build OSI visualizer.

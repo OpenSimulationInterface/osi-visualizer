@@ -20,8 +20,8 @@ It is recommended to use OSI Visualizer under _Ubuntu Linux 18.04 LTS_.
 **Steps**
 
 . Open a command line interpreter.
-. Change to the OSI visualizer repository
-. Run the following command to update the list of available packages and upgrad your system.
+. Change to the OSI visualizer repository.
+. Run the following command to update the list of available packages and upgrade your system.
 +
 [source]
 ----

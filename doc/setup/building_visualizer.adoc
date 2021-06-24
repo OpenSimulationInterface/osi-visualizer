@@ -18,7 +18,7 @@ OSI visualizer provides a script for building OSI visualizer.
 **Steps**
 
 . Open a command line interpreter.
-. Change to the OSI visualizer repository
+. Change to the OSI visualizer repository.
 . Run the provided script to build OSI visualizer.
 +
 [source]
